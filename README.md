@@ -1,1 +1,1 @@
-# Regionless-Platform-POC
+# global-resource-service
