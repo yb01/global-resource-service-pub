@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"sync"
 
-	"resource-management/pkg/common-lib/types"
-	"resource-management/pkg/common-lib/types/event"
-	"resource-management/pkg/common-lib/types/location"
-	"resource-management/pkg/distributor/cache"
-	"resource-management/pkg/distributor/storage"
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/distributor/cache"
+	"global-resource-service/resource-management/pkg/distributor/storage"
 )
 
 type ResourceDistributor struct {

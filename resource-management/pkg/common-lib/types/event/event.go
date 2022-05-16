@@ -1,6 +1,6 @@
 package event
 
-import "resource-management/pkg/common-lib/types"
+import "global-resource-service/resource-management/pkg/common-lib/types"
 
 // EventType defines the possible types of events.
 type EventType string

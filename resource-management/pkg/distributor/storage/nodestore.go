@@ -5,11 +5,11 @@ import (
 	"math"
 	"sync"
 
-	"resource-management/pkg/common-lib/hash"
-	"resource-management/pkg/common-lib/types"
-	"resource-management/pkg/common-lib/types/event"
-	"resource-management/pkg/common-lib/types/location"
-	"resource-management/pkg/distributor/cache"
+	"global-resource-service/resource-management/pkg/common-lib/hash"
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/distributor/cache"
 )
 
 const (

@@ -1,4 +1,4 @@
-module resource-management
+module global-resource-service/resource-management
 
 go 1.13
 
