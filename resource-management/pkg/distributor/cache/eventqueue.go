@@ -6,9 +6,9 @@ import (
 	"sort"
 	"sync"
 
-	"resource-management/pkg/common-lib/types"
-	"resource-management/pkg/common-lib/types/event"
-	"resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 )
 
 // TODO - read from config

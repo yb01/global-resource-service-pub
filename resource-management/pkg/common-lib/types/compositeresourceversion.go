@@ -1,6 +1,6 @@
 package types
 
-import "resource-management/pkg/common-lib/types/location"
+import "global-resource-service/resource-management/pkg/common-lib/types/location"
 
 type CompositeResourceVersion struct {
 	RegionId            string

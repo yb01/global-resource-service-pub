@@ -1,8 +1,8 @@
 package distributor
 
 import (
-	"resource-management/pkg/common-lib/types"
-	"resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
 
 type Interface interface {
