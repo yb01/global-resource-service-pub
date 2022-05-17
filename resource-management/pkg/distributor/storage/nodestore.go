@@ -126,6 +126,8 @@ type NodeStore struct {
 }
 
 func NewNodeStore(vNodeNumPerRP int, regionNum int, partitionMaxNum int) *NodeStore {
+	fmt.Printf("Initialize node store with virtual node per RP: %d\n", vNodeNumPerRP)
+
 	totalVirtualNodeNum := vNodeNumPerRP * regionNum * partitionMaxNum
 	virtualNodeStores := make([]*VirtualNodeStore, totalVirtualNodeNum)
 
@@ -228,6 +230,9 @@ func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
 
 func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*event.NodeEvent) (bool, types.ResourceVersionMap) {
 	for _, e := range nodeEvents {
+		if e == nil {
+			break
+		}
 		ns.processNodeEvent(e)
 	}
 

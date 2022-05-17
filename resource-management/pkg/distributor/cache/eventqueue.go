@@ -81,7 +81,10 @@ func (qloc *nodeEventQueueByLoc) getEventIndexSinceResourceVersion(resourceVersi
 	index := sort.Search(qloc.endPos-qloc.startPos, func(i int) bool {
 		return qloc.circularEventQueue[(qloc.startPos+i)%LengthOfNodeEventQueue].GetNode().GetResourceVersion() > resourceVersion
 	})
-	if index >= qloc.endPos || index < qloc.startPos {
+	if index == qloc.endPos {
+		return -1, types.Error_EndOfEventQueue
+	}
+	if index > qloc.endPos || index < qloc.startPos {
 		return -1, errors.New(fmt.Sprintf("Event queue start pos %d, end pos %d, found invalid start index %d", qloc.startPos, qloc.endPos, index))
 	}
 	return index, nil
@@ -172,6 +175,9 @@ func (eq *NodeEventQueue) getAllEventsSinceResourceVersion(rvs types.ResourceVer
 		if isOK {
 			startIndex, err := qByLoc.getEventIndexSinceResourceVersion(rv)
 			if err != nil {
+				if err == types.Error_EndOfEventQueue {
+					return nil, nil
+				}
 				return nil, err
 			}
 			locStartPostitions[loc] = startIndex

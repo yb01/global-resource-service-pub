@@ -30,9 +30,10 @@ var _distributor *ResourceDistributor = nil
 var once sync.Once
 
 const (
-	MinimalRequestHostNum               = 50
-	VirutalStoreNumPerResourcePartition = 200 // 10K per resource partition, 50 hosts per virtual node store
+	MinimalRequestHostNum = 50
 )
+
+var virutalStoreNumPerResourcePartition = 200 // 10K per resource partition, 50 hosts per virtual node store
 
 func GetResourceDistributor() *ResourceDistributor {
 	once.Do(func() {
@@ -47,7 +48,7 @@ func GetResourceDistributor() *ResourceDistributor {
 
 // TODO - get virtual node number, region num, partition num from external
 func createNodeStore() *storage.NodeStore {
-	return storage.NewNodeStore(VirutalStoreNumPerResourcePartition, location.GetRegionNum(), location.GetRPNum())
+	return storage.NewNodeStore(virutalStoreNumPerResourcePartition, location.GetRegionNum(), location.GetRPNum())
 }
 
 func (dis *ResourceDistributor) RegisterClient(requestedHostNum int) (string, bool, error) {

@@ -67,10 +67,22 @@ const (
 	ResourcePartition8  ResourcePartition = "RP8"
 	ResourcePartition9  ResourcePartition = "RP9"
 	ResourcePartition10 ResourcePartition = "RP10"
+	ResourcePartition11 ResourcePartition = "RP11"
+	ResourcePartition12 ResourcePartition = "RP12"
+	ResourcePartition13 ResourcePartition = "RP13"
+	ResourcePartition14 ResourcePartition = "RP14"
+	ResourcePartition15 ResourcePartition = "RP15"
+	ResourcePartition16 ResourcePartition = "RP16"
+	ResourcePartition17 ResourcePartition = "RP17"
+	ResourcePartition18 ResourcePartition = "RP18"
+	ResourcePartition19 ResourcePartition = "RP19"
+	ResourcePartition20 ResourcePartition = "RP20"
 )
 
 var ResourcePartitions = []ResourcePartition{ResourcePartition1, ResourcePartition2, ResourcePartition3, ResourcePartition4, ResourcePartition5,
-	ResourcePartition6, ResourcePartition7, ResourcePartition8, ResourcePartition9, ResourcePartition10}
+	ResourcePartition6, ResourcePartition7, ResourcePartition8, ResourcePartition9, ResourcePartition10, ResourcePartition11, ResourcePartition12,
+	ResourcePartition13, ResourcePartition14, ResourcePartition15, ResourcePartition16, ResourcePartition17, ResourcePartition18, ResourcePartition19,
+	ResourcePartition20}
 var regionRPToArc map[Location]arc
 
 func init() {

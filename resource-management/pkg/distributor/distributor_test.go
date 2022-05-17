@@ -23,13 +23,11 @@ var singleTestLock = sync.Mutex{}
 
 var defaultLocBeijing_RP1 = location.NewLocation(location.Beijing, location.ResourcePartition1)
 
+const defaultVirtualStoreNumPerRP = 200 // 10K per resource partition, 50 hosts per virtual node store
+
 func setUp() *ResourceDistributor {
 	singleTestLock.Lock()
-	return GetResourceDistributor()
-}
-
-func tearDown(distributor *ResourceDistributor) {
-	defer singleTestLock.Unlock()
+	distributor := GetResourceDistributor()
 
 	// flush node stores
 	distributor.defaultNodeStore = createNodeStore()
@@ -39,11 +37,18 @@ func tearDown(distributor *ResourceDistributor) {
 
 	// flush clientToStores map
 	distributor.clientToStores = make(map[string][]*storage.VirtualNodeStore)
+
+	return distributor
+}
+
+func tearDown() {
+	virutalStoreNumPerResourcePartition = defaultVirtualStoreNumPerRP
+	singleTestLock.Unlock()
 }
 
 func TestDistributorInit(t *testing.T) {
 	distributor := setUp()
-	defer tearDown(distributor)
+	defer tearDown()
 
 	assert.NotNil(t, distributor, "Distributor cannot be nil")
 
@@ -93,22 +98,22 @@ func measureProcessEvent(t *testing.T, dis *ResourceDistributor, eventType strin
 
 func TestAddNodes(t *testing.T) {
 	distributor := setUp()
-	defer tearDown(distributor)
+	defer tearDown()
 
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	previousNodeCount := 0
 	for i := 0; i < len(nodeCounts); i++ {
-		eventsAdd := generateAddNodeEvent(nodeCounts[i])
+		eventsAdd := generateAddNodeEvent(nodeCounts[i], defaultLocBeijing_RP1)
 		measureProcessEvent(t, distributor, "AddNode", eventsAdd, previousNodeCount)
 		previousNodeCount += nodeCounts[i]
 	}
 }
 
-func generateAddNodeEvent(eventNum int) []*event.NodeEvent {
+func generateAddNodeEvent(eventNum int, loc *location.Location) []*event.NodeEvent {
 	result := make([]*event.NodeEvent, eventNum)
 	for i := 0; i < eventNum; i++ {
 		rvToGenerate += 1
-		node := createRandomNode(rvToGenerate)
+		node := createRandomNode(rvToGenerate, loc)
 		nodeEvent := event.NewNodeEvent(node, event.Added)
 		result[i] = nodeEvent
 	}
@@ -138,14 +143,14 @@ func generatedUpdateNodeEventsFromNodeList(nodes []*types.Node) []*event.NodeEve
 	return result
 }
 
-func createRandomNode(rv int) *types.Node {
+func createRandomNode(rv int, loc *location.Location) *types.Node {
 	id := uuid.New()
-	return types.NewNode(id.String(), strconv.Itoa(rv), "", defaultLocBeijing_RP1)
+	return types.NewNode(id.String(), strconv.Itoa(rv), "", loc)
 }
 
 func TestUpdateNodes(t *testing.T) {
 	distributor := setUp()
-	defer tearDown(distributor)
+	defer tearDown()
 
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	previousNodeCount := 0
@@ -156,7 +161,7 @@ func TestUpdateNodes(t *testing.T) {
 }
 
 func addAndUpdateNodes(t *testing.T, distributor *ResourceDistributor, eventNum int, previousNodeCount int) {
-	eventsAdd := generateAddNodeEvent(eventNum)
+	eventsAdd := generateAddNodeEvent(eventNum, defaultLocBeijing_RP1)
 	measureProcessEvent(t, distributor, "AddNode", eventsAdd, previousNodeCount)
 	// update nodes
 	eventsUpdate := generateUpdateNodeEvents(eventsAdd)
@@ -165,9 +170,9 @@ func addAndUpdateNodes(t *testing.T, distributor *ResourceDistributor, eventNum 
 
 func TestRegisterClient_ErrorCases(t *testing.T) {
 	distributor := setUp()
-	defer tearDown(distributor)
+	defer tearDown()
 
-	result, rvMap := distributor.ProcessEvents(generateAddNodeEvent(10))
+	result, rvMap := distributor.ProcessEvents(generateAddNodeEvent(10, defaultLocBeijing_RP1))
 	assert.True(t, result)
 	assert.NotNil(t, rvMap)
 	assert.Equal(t, 10, distributor.defaultNodeStore.GetTotalHostNum())
@@ -189,9 +194,9 @@ func TestRegisterClient_ErrorCases(t *testing.T) {
 
 func TestRegisterClient_WithinLimit(t *testing.T) {
 	distributor := setUp()
-	defer tearDown(distributor)
+	defer tearDown()
 
-	result, rvMap := distributor.ProcessEvents(generateAddNodeEvent(10000))
+	result, rvMap := distributor.ProcessEvents(generateAddNodeEvent(10000, defaultLocBeijing_RP1))
 	assert.True(t, result)
 	assert.NotNil(t, rvMap)
 	assert.Equal(t, 10000, distributor.defaultNodeStore.GetTotalHostNum())
@@ -221,15 +226,20 @@ func TestRegisterClient_WithinLimit(t *testing.T) {
 		}
 		fmt.Printf("Total %d hosts are assigned to client %s\nTook %v to register the client.\n", hostCount, clientId, duration)
 		assert.True(t, hostCount >= requestedHostNum, "Assigned host number %d is less than requested %d", hostCount, requestedHostNum)
+
+		// check nodes number with list nodes
+		nodes, _, err := distributor.ListNodesForClient(clientId)
+		assert.Nil(t, err, "List nodes by client id should be successful")
+		assert.Equal(t, hostCount, len(nodes), "Node count from virtual store should be same as list nodes")
 	}
 }
 
 func TestRegistrationWorkflow(t *testing.T) {
 	distributor := setUp()
-	defer tearDown(distributor)
+	defer tearDown()
 
 	// initialize node store with 10K nodes
-	eventsAdd := generateAddNodeEvent(10000)
+	eventsAdd := generateAddNodeEvent(10000, defaultLocBeijing_RP1)
 	result, rvMap := distributor.ProcessEvents(eventsAdd)
 	assert.True(t, result)
 	assert.NotNil(t, rvMap)
@@ -255,14 +265,14 @@ func TestRegistrationWorkflow(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, latestRVs)
 	assert.True(t, len(nodes) >= 500)
-	fmt.Printf("Latest rvs: %v\n", latestRVs)
+	fmt.Printf("Latest rvs: %v. Total hosts: %d\n", latestRVs, len(nodes))
 	// check each node event
 	nodeIds := make(map[string]bool)
 	for _, node := range nodes {
 		assert.NotNil(t, node.GetLocation())
 		assert.True(t, latestRVs[*node.GetLocation()] >= node.GetResourceVersion())
 		if _, isOK := nodeIds[node.GetId()]; isOK {
-			assert.Fail(t, "List nodes cannot have more than ")
+			assert.Fail(t, "List nodes cannot have more than one copy of a node")
 		} else {
 			nodeIds[node.GetId()] = true
 		}
