@@ -355,3 +355,116 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 		})
 	}
 }
+
+/*
+RV using map, has lock on ResourceDistributor.ProcessEvents
+Processing 20 AddNode events took 47.672µs.
+Processing 200 AddNode events took 180.329µs.
+Processing 2000 AddNode events took 1.639455ms.
+Processing 20000 AddNode events took 15.005638ms.
+Processing 200000 AddNode events took 202.639629ms.
+Processing 2000000 AddNode events took 2.202974335s.
+
+RV using map, NO lock on ResourceDistributor.ProcessEvents
+Processing 20 AddNode events took 49.985µs.
+Processing 200 AddNode events took 177.707µs.
+Processing 2000 AddNode events took 1.6575ms.
+Processing 20000 AddNode events took 15.87493ms.
+Processing 200000 AddNode events took 203.718498ms.
+Processing 2000000 AddNode events took 2.338442347s.
+
+RV using array, NO lock on ResourceDistributor.ProcessEvents, has lock on rv check
+Processing 20 AddNode events took 71.154µs.
+Processing 200 AddNode events took 183.098µs.
+Processing 2000 AddNode events took 1.607259ms.
+Processing 20000 AddNode events took 11.793391ms.
+Processing 200000 AddNode events took 154.692465ms.
+Processing 2000000 AddNode events took 1.85247087s.
+
+RV using array, added lock for snapshot in event queue
+Processing 20 AddNode events took 46.419µs.
+Processing 200 AddNode events took 144.9µs.
+Processing 2000 AddNode events took 1.390383ms.
+Processing 20000 AddNode events took 11.794798ms.
+Processing 200000 AddNode events took 144.229808ms.
+Processing 2000000 AddNode events took 1.86103252s.
+*/
+func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
+	distributor := setUp()
+	defer tearDown()
+
+	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
+	// generate add node events
+	for i := 0; i < len(nodeCounts); i++ {
+		eventsAdd1 := generateAddNodeEvent(nodeCounts[i], defaultLocBeijing_RP1)
+		eventsAdd2 := generateAddNodeEvent(nodeCounts[i], location.NewLocation(location.Shanghai, location.ResourcePartition2))
+		start := time.Now()
+		distributor.ProcessEvents(eventsAdd1)
+		_, rvMap := distributor.ProcessEvents(eventsAdd2)
+		duration := time.Since(start)
+		fmt.Printf("Processing %d AddNode events took %v. Composite RVs %v\n", nodeCounts[i]*2, duration, rvMap)
+	}
+}
+
+/*
+RV using map, has lock on ResourceDistributor.ProcessEvents
+Processing 20 AddNode events took 114.303µs.
+Processing 200 AddNode events took 232.242µs.
+Processing 2000 AddNode events took 2.335808ms.
+Processing 20000 AddNode events took 15.309473ms.
+Processing 200000 AddNode events took 182.779783ms.
+Processing 2000000 AddNode events took 2.251335613s.
+
+RV using map, NO lock on ResourceDistributor.ProcessEvents
+Processing 20 AddNode events took 77.699µs.
+Processing 200 AddNode events took 188.916µs.
+Processing 2000 AddNode events took 1.206867ms.
+Processing 20000 AddNode events took 11.0227ms.
+Processing 200000 AddNode events took 126.118044ms.
+Processing 2000000 AddNode events took 1.568443698s.
+
+RV using array, NO lock on ResourceDistributor.ProcessEvents, has lock on rv check
+Processing 20 AddNode events took 70.499µs.
+Processing 200 AddNode events took 167.544µs.
+Processing 2000 AddNode events took 906.622µs.
+Processing 20000 AddNode events took 6.965772ms.
+Processing 200000 AddNode events took 106.936265ms.
+Processing 2000000 AddNode events took 1.24163592s.
+
+RV using array, added lock for snapshot in event queue
+Processing 20 AddNode events took 87.807µs.
+Processing 200 AddNode events took 177.349µs.
+Processing 2000 AddNode events took 859.874µs.
+Processing 20000 AddNode events took 6.772558ms.
+Processing 200000 AddNode events took 109.476743ms.
+Processing 2000000 AddNode events took 1.21830443s.
+*/
+func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
+	distributor := setUp()
+	defer tearDown()
+
+	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
+	// generate add node events
+	for i := 0; i < len(nodeCounts); i++ {
+		eventsAdd1 := generateAddNodeEvent(nodeCounts[i], defaultLocBeijing_RP1)
+		eventsAdd2 := generateAddNodeEvent(nodeCounts[i], location.NewLocation(location.Shanghai, location.ResourcePartition2))
+		start := time.Now()
+
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+
+		go func(done *sync.WaitGroup, eventsToProcess []*event.NodeEvent) {
+			distributor.ProcessEvents(eventsToProcess)
+			done.Done()
+		}(wg, eventsAdd1)
+
+		go func(done *sync.WaitGroup, eventsToProcess []*event.NodeEvent) {
+			distributor.ProcessEvents(eventsToProcess)
+			done.Done()
+		}(wg, eventsAdd2)
+
+		wg.Wait()
+		duration := time.Since(start)
+		fmt.Printf("Processing %d AddNode events took %v.\n", nodeCounts[i]*2, duration)
+	}
+}

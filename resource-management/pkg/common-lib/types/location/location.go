@@ -23,66 +23,127 @@ type arc struct {
 
 // Region defines the possible region location of a given node
 // Defined and doced by region admin
-type Region string
+type Region int
 
 const (
 	// Regions
-	Beijing   Region = "Beijing"
-	Shanghai  Region = "Shanghai"
-	Wulan     Region = "Wulan"
-	Guizhou   Region = "Guizhou"
-	Reserved1 Region = "Reserved1"
-	Reserved2 Region = "Reserved2"
-	Reserved3 Region = "Reserved3"
-	Reserved4 Region = "Reserved4"
-	Reserved5 Region = "Reserved5"
+	Beijing   Region = 0
+	Shanghai  Region = 1
+	Wulan     Region = 2
+	Guizhou   Region = 3
+	Reserved1 Region = 4
+	Reserved2 Region = 5
+	Reserved3 Region = 6
+	Reserved4 Region = 7
+	Reserved5 Region = 8
 )
 
-var Regions = []Region{
-	0: Beijing,
-	1: Shanghai,
-	2: Wulan,
-	3: Guizhou,
-	4: Reserved1,
-	5: Reserved2,
-	6: Reserved3,
-	7: Reserved4,
-	8: Reserved5,
+func (r Region) String() string {
+	switch r {
+	case Beijing:
+		return "Beijing"
+	case Shanghai:
+		return "Shanghai"
+	case Wulan:
+		return "Wulan"
+	case Guizhou:
+		return "Guizhou"
+	case Reserved1:
+		return "Reserved1"
+	case Reserved2:
+		return "Reserved2"
+	case Reserved3:
+		return "Reserved3"
+	case Reserved4:
+		return "Reserved4"
+	case Reserved5:
+		return "Reserved5"
+	}
+	return "undefined"
 }
+
+var Regions = []Region{Beijing, Shanghai, Wulan, Guizhou, Reserved1, Reserved2, Reserved3, Reserved4, Reserved5}
 
 var regionToArc map[string]arc
 
 // ResourcePartition defines the possible resource partition of a given node
 // Defined and doced by region admin
-type ResourcePartition string
+type ResourcePartition int
 
 const (
-	ResourcePartition1  ResourcePartition = "RP1"
-	ResourcePartition2  ResourcePartition = "RP2"
-	ResourcePartition3  ResourcePartition = "RP3"
-	ResourcePartition4  ResourcePartition = "RP4"
-	ResourcePartition5  ResourcePartition = "RP5"
-	ResourcePartition6  ResourcePartition = "RP6"
-	ResourcePartition7  ResourcePartition = "RP7"
-	ResourcePartition8  ResourcePartition = "RP8"
-	ResourcePartition9  ResourcePartition = "RP9"
-	ResourcePartition10 ResourcePartition = "RP10"
-	ResourcePartition11 ResourcePartition = "RP11"
-	ResourcePartition12 ResourcePartition = "RP12"
-	ResourcePartition13 ResourcePartition = "RP13"
-	ResourcePartition14 ResourcePartition = "RP14"
-	ResourcePartition15 ResourcePartition = "RP15"
-	ResourcePartition16 ResourcePartition = "RP16"
-	ResourcePartition17 ResourcePartition = "RP17"
-	ResourcePartition18 ResourcePartition = "RP18"
-	ResourcePartition19 ResourcePartition = "RP19"
-	ResourcePartition20 ResourcePartition = "RP20"
+	ResourcePartition1  ResourcePartition = 0
+	ResourcePartition2  ResourcePartition = 1
+	ResourcePartition3  ResourcePartition = 2
+	ResourcePartition4  ResourcePartition = 3
+	ResourcePartition5  ResourcePartition = 4
+	ResourcePartition6  ResourcePartition = 5
+	ResourcePartition7  ResourcePartition = 6
+	ResourcePartition8  ResourcePartition = 7
+	ResourcePartition9  ResourcePartition = 8
+	ResourcePartition10 ResourcePartition = 9
+	ResourcePartition11 ResourcePartition = 10
+	ResourcePartition12 ResourcePartition = 11
+	ResourcePartition13 ResourcePartition = 12
+	ResourcePartition14 ResourcePartition = 13
+	ResourcePartition15 ResourcePartition = 14
+	ResourcePartition16 ResourcePartition = 15
+	ResourcePartition17 ResourcePartition = 16
+	ResourcePartition18 ResourcePartition = 17
+	ResourcePartition19 ResourcePartition = 18
+	ResourcePartition20 ResourcePartition = 19
 )
+
+func (rp ResourcePartition) String() string {
+	switch rp {
+	case ResourcePartition1:
+		return "RP1"
+	case ResourcePartition2:
+		return "RP2"
+	case ResourcePartition3:
+		return "RP3"
+	case ResourcePartition4:
+		return "RP4"
+	case ResourcePartition5:
+		return "RP5"
+	case ResourcePartition6:
+		return "RP6"
+	case ResourcePartition7:
+		return "RP7"
+	case ResourcePartition8:
+		return "RP8"
+	case ResourcePartition9:
+		return "RP9"
+	case ResourcePartition10:
+		return "RP10"
+	case ResourcePartition11:
+		return "RP11"
+	case ResourcePartition12:
+		return "RP12"
+	case ResourcePartition13:
+		return "RP13"
+	case ResourcePartition14:
+		return "RP14"
+	case ResourcePartition15:
+		return "RP15"
+	case ResourcePartition16:
+		return "RP16"
+	case ResourcePartition17:
+		return "RP17"
+	case ResourcePartition18:
+		return "RP18"
+	case ResourcePartition19:
+		return "RP19"
+	case ResourcePartition20:
+		return "RP20"
+	}
+	return "undefined"
+}
 
 var ResourcePartitions = []ResourcePartition{ResourcePartition1, ResourcePartition2, ResourcePartition3, ResourcePartition4, ResourcePartition5,
 	ResourcePartition6, ResourcePartition7, ResourcePartition8, ResourcePartition9, ResourcePartition10, ResourcePartition11, ResourcePartition12,
 	ResourcePartition13, ResourcePartition14, ResourcePartition15, ResourcePartition16, ResourcePartition17, ResourcePartition18, ResourcePartition19,
 	ResourcePartition20}
+
 var regionRPToArc map[Location]arc
 
 func init() {
@@ -138,6 +199,14 @@ func GetRPsForRegion(region Region) []ResourcePartition {
 		rpsForRegion[i] = ResourcePartitions[i]
 	}
 	return rpsForRegion
+}
+
+func (loc *Location) GetRegion() Region {
+	return loc.region
+}
+
+func (loc *Location) GetResourcePartition() ResourcePartition {
+	return loc.partition
 }
 
 func (loc *Location) GetArcRangeFromLocation() (float64, float64) {

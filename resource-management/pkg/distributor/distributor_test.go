@@ -72,7 +72,7 @@ func TestDistributorInit(t *testing.T) {
 		loc := store.GetLocation()
 		assert.NotNil(t, loc, "Location of store should not be empty")
 		if defaultLocBeijing_RP1.Equal(loc) {
-			fmt.Printf("virtual node store %d, location %s, hash range (%f, %f]\n", i, store.GetLocation(), lowerBound, upperBound)
+			fmt.Printf("virtual node store %d, location %v, hash range (%f, %f]\n", i, store.GetLocation(), lowerBound, upperBound)
 		}
 	}
 }
@@ -96,6 +96,31 @@ func measureProcessEvent(t *testing.T, dis *ResourceDistributor, eventType strin
 	assert.Equal(t, len(events)+previousNodeCount, hostCount, "Expected host number %d does not match actual host number %d", len(events), hostCount)
 }
 
+/*
+RV using map - has lock:
+Processing 10 AddNode events took 50.668µs.
+Processing 100 AddNode events took 84.67µs.
+Processing 1000 AddNode events took 838.216µs.
+Processing 10000 AddNode events took 8.393787ms.
+Processing 100000 AddNode events took 102.707352ms.
+Processing 1000000 AddNode events took 1.184265289s.
+
+RV using map - NO lock:
+Processing 10 AddNode events took 35.453µs.
+Processing 100 AddNode events took 80.803µs.
+Processing 1000 AddNode events took 817.802µs.
+Processing 10000 AddNode events took 7.555092ms.
+Processing 100000 AddNode events took 91.526917ms.
+Processing 1000000 AddNode events took 1.152776809s.
+
+RV using array - NO lock, has lock on rv check
+Processing 10 AddNode events took 34.957µs.
+Processing 100 AddNode events took 63.625µs.
+Processing 1000 AddNode events took 667.154µs.
+Processing 10000 AddNode events took 5.899166ms.
+Processing 100000 AddNode events took 77.327117ms.
+Processing 1000000 AddNode events took 831.232514ms.
+*/
 func TestAddNodes(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()

@@ -12,7 +12,7 @@ func TestGetRPsForRegion(t *testing.T) {
 	region := Beijing
 	beijingRPs := GetRPsForRegion(region)
 	for i := 0; i < len(ResourcePartitions); i++ {
-		assert.Equal(t, fmt.Sprintf("RP%d", i+1), string(beijingRPs[i]), "Unexpected RP name")
+		assert.Equal(t, fmt.Sprintf("RP%d", i+1), beijingRPs[i].String(), "Unexpected RP name")
 	}
 }
 

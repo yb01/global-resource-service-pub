@@ -18,8 +18,7 @@ type ResourceDistributor struct {
 	defaultNodeStore *storage.NodeStore
 
 	// clientId to node event queue
-	nodeEventQueueMap   map[string]*cache.NodeEventQueue
-	eventProcessingLock sync.RWMutex
+	nodeEventQueueMap map[string]*cache.NodeEventQueue
 
 	// clientId to virtual node store map
 	clientToStores map[string][]*storage.VirtualNodeStore
@@ -164,8 +163,12 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.No
 	if !isOK {
 		return nil, nil, errors.New(fmt.Sprintf("Client %s not registered.", clientId))
 	}
+	eventQueue, isOK := dis.nodeEventQueueMap[clientId]
+	if !isOK {
+		return nil, nil, errors.New(fmt.Sprintf("Internal error: missing event queue for Client %s.", clientId))
+	}
 
-	dis.eventProcessingLock.RLock()
+	eventQueue.AcquireSnapshotRLock()
 	nodesByStore := make([][]*types.Node, len(assignedStores))
 	rvMapByStore := make([]types.ResourceVersionMap, len(assignedStores))
 	hostCount := 0
@@ -173,7 +176,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.No
 		nodesByStore[i], rvMapByStore[i] = assignedStores[i].SnapShot()
 		hostCount += len(nodesByStore[i])
 	}
-	dis.eventProcessingLock.RUnlock()
+	eventQueue.ReleaseSnapshotRLock()
 
 	// combine to single array of nodeEvent
 	nodes := make([]*types.Node, hostCount)
@@ -223,9 +226,6 @@ func (dis *ResourceDistributor) Watch(clientId string, rvs types.ResourceVersion
 }
 
 func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, types.ResourceVersionMap) {
-	dis.eventProcessingLock.Lock()
-	defer dis.eventProcessingLock.Unlock()
 	result, rvMap := dis.defaultNodeStore.ProcessNodeEvents(events)
-
 	return result, rvMap
 }

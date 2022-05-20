@@ -95,6 +95,9 @@ type NodeEventQueue struct {
 	clientId  string
 	watchChan chan *event.NodeEvent
 
+	// used to lock enqueue operation during snapshot
+	enqueueLock sync.RWMutex
+
 	eventQueueByLoc map[location.Location]*nodeEventQueueByLoc
 	locationLock    sync.RWMutex
 }
@@ -108,7 +111,17 @@ func NewNodeEventQueue(clientId string) *NodeEventQueue {
 	return queue
 }
 
+func (eq *NodeEventQueue) AcquireSnapshotRLock() {
+	eq.enqueueLock.RLock()
+}
+
+func (eq *NodeEventQueue) ReleaseSnapshotRLock() {
+	eq.enqueueLock.RUnlock()
+}
+
 func (eq *NodeEventQueue) EnqueueEvent(e *event.NodeEvent) {
+	eq.enqueueLock.Lock()
+	defer eq.enqueueLock.Unlock()
 	if eq.watchChan != nil {
 		go func() {
 			eq.watchChan <- e
