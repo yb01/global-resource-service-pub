@@ -15,7 +15,7 @@ import (
 
 type Aggregator struct {
 	urls           []string
-	EventProcessor interfaces.InterfacesOfDistributor
+	EventProcessor interfaces.Interface
 }
 
 // To be client of Resource Region Manager
@@ -47,7 +47,7 @@ const (
 
 // Initialize aggregator
 //
-func NewAggregator(urls []string, EventProcessor interfaces.InterfacesOfDistributor) *Aggregator {
+func NewAggregator(urls []string, EventProcessor interfaces.Interface) *Aggregator {
 	return &Aggregator{
 		urls:           urls,
 		EventProcessor: EventProcessor,
