@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	interfaces "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
+	distributor "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
 
 type Aggregator struct {
 	urls           []string
-	EventProcessor interfaces.Interface
+	EventProcessor distributor.Interface
 }
 
 // To be client of Resource Region Manager
@@ -47,7 +47,7 @@ const (
 
 // Initialize aggregator
 //
-func NewAggregator(urls []string, EventProcessor interfaces.Interface) *Aggregator {
+func NewAggregator(urls []string, EventProcessor distributor.Interface) *Aggregator {
 	return &Aggregator{
 		urls:           urls,
 		EventProcessor: EventProcessor,
