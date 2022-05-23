@@ -9,13 +9,14 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/distributor/node"
 )
 
 // TODO - read from config
 const LengthOfNodeEventQueue = 10000
 
 type nodeEventQueueByLoc struct {
-	circularEventQueue []*event.NodeEvent
+	circularEventQueue []*node.ManagedNodeEvent
 	// circular event queue start position and end position
 	startPos int
 	endPos   int
@@ -26,14 +27,14 @@ type nodeEventQueueByLoc struct {
 
 func newNodeQueueByLoc() *nodeEventQueueByLoc {
 	return &nodeEventQueueByLoc{
-		circularEventQueue: make([]*event.NodeEvent, LengthOfNodeEventQueue),
+		circularEventQueue: make([]*node.ManagedNodeEvent, LengthOfNodeEventQueue),
 		startPos:           0,
 		endPos:             0,
 		eqLock:             sync.RWMutex{},
 	}
 }
 
-func (qloc *nodeEventQueueByLoc) enqueueEvent(e *event.NodeEvent) {
+func (qloc *nodeEventQueueByLoc) enqueueEvent(e *node.ManagedNodeEvent) {
 	qloc.eqLock.Lock()
 	defer qloc.eqLock.Unlock()
 
@@ -54,10 +55,10 @@ func (qloc *nodeEventQueueByLoc) dequeueEvents(startIndex int) ([]*event.NodeEve
 		return nil, errors.New(fmt.Sprintf("Event queue start pos %d, end pos %d, invalid start index %d", qloc.startPos, qloc.endPos, startIndex))
 	}
 
-	length := qloc.endPos - qloc.startPos
+	length := qloc.endPos - startIndex
 	result := make([]*event.NodeEvent, length)
 	for i := 0; i < length; i++ {
-		result[i] = qloc.circularEventQueue[(startIndex+i)%LengthOfNodeEventQueue]
+		result[i] = qloc.circularEventQueue[(startIndex+i)%LengthOfNodeEventQueue].GetNodeEvent()
 	}
 
 	qloc.startPos = qloc.endPos
@@ -71,15 +72,15 @@ func (qloc *nodeEventQueueByLoc) getEventIndexSinceResourceVersion(resourceVersi
 	if qloc.endPos-qloc.startPos == 0 {
 		return -1, errors.New(fmt.Sprintf("Empty event queue"))
 	}
-	oldestRV := qloc.circularEventQueue[qloc.startPos%LengthOfNodeEventQueue].GetNode().GetResourceVersion()
+	oldestRV := qloc.circularEventQueue[qloc.startPos%LengthOfNodeEventQueue].GetResourceVersion()
 	if oldestRV > resourceVersion {
 		return -1, errors.New(fmt.Sprintf("Loc %s events oldest resource Version %d is newer than requested resource version %d",
-			qloc.circularEventQueue[qloc.startPos%LengthOfNodeEventQueue].GetNode().GetLocation(),
+			qloc.circularEventQueue[qloc.startPos%LengthOfNodeEventQueue].GetLocation(),
 			oldestRV, resourceVersion))
 	}
 
 	index := sort.Search(qloc.endPos-qloc.startPos, func(i int) bool {
-		return qloc.circularEventQueue[(qloc.startPos+i)%LengthOfNodeEventQueue].GetNode().GetResourceVersion() > resourceVersion
+		return qloc.circularEventQueue[(qloc.startPos+i)%LengthOfNodeEventQueue].GetResourceVersion() > resourceVersion
 	})
 	if index == qloc.endPos {
 		return -1, types.Error_EndOfEventQueue
@@ -119,21 +120,21 @@ func (eq *NodeEventQueue) ReleaseSnapshotRLock() {
 	eq.enqueueLock.RUnlock()
 }
 
-func (eq *NodeEventQueue) EnqueueEvent(e *event.NodeEvent) {
+func (eq *NodeEventQueue) EnqueueEvent(e *node.ManagedNodeEvent) {
 	eq.enqueueLock.Lock()
 	defer eq.enqueueLock.Unlock()
 	if eq.watchChan != nil {
 		go func() {
-			eq.watchChan <- e
+			eq.watchChan <- e.GetNodeEvent()
 		}()
 	}
 
 	eq.locationLock.Lock()
 	defer eq.locationLock.Unlock()
-	queueByLoc, isOK := eq.eventQueueByLoc[*e.GetNode().GetLocation()]
+	queueByLoc, isOK := eq.eventQueueByLoc[*e.GetLocation()]
 	if !isOK {
 		queueByLoc = newNodeQueueByLoc()
-		eq.eventQueueByLoc[*e.GetNode().GetLocation()] = queueByLoc
+		eq.eventQueueByLoc[*e.GetLocation()] = queueByLoc
 	}
 	queueByLoc.enqueueEvent(e)
 }

@@ -76,7 +76,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 
 			// client list nodes
 			latestRVsByClient := make([]types.ResourceVersionMap, tt.clientNum)
-			nodesByClient := make([][]*types.Node, tt.clientNum)
+			nodesByClient := make([][]*types.LogicalNode, tt.clientNum)
 			for i := 0; i < tt.clientNum; i++ {
 				clientId := clientIds[i]
 
@@ -94,12 +94,13 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 				// check each node event
 				nodeIds := make(map[string]bool)
 				for _, node := range nodes {
-					assert.NotNil(t, node.GetLocation())
-					assert.True(t, latestRVs[*node.GetLocation()] >= node.GetResourceVersion())
-					if _, isOK := nodeIds[node.GetId()]; isOK {
+					nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+					assert.NotNil(t, nodeLoc)
+					assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+					if _, isOK := nodeIds[node.Id]; isOK {
 						assert.Fail(t, "List nodes cannot have more than one copy of a node")
 					} else {
-						nodeIds[node.GetId()] = true
+						nodeIds[node.Id] = true
 					}
 				}
 				assert.Equal(t, len(nodes), len(nodeIds))
@@ -135,14 +136,15 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 
 			// update nodes
 			for i := 0; i < tt.clientNum; i++ {
-				go func(expectedEventCount int, nodes []*types.Node, clientId string) {
+				go func(expectedEventCount int, nodes []*types.LogicalNode, clientId string) {
 					for j := 0; j < expectedEventCount/len(nodes)+2; j++ {
 						updateNodeEvents := make([]*event.NodeEvent, len(nodes))
 						for k := 0; k < len(nodes); k++ {
 							rvToGenerate += 1
-							updateNodeEvents[k] = event.NewNodeEvent(
-								types.NewNode(nodes[k].GetId(), strconv.Itoa(rvToGenerate), "", nodes[k].GetLocation()),
-								event.Modified)
+
+							newNode := nodes[k].Copy()
+							newNode.ResourceVersion = strconv.Itoa(rvToGenerate)
+							updateNodeEvents[k] = event.NewNodeEvent(newNode, event.Modified)
 						}
 						result, rvMap := distributor.ProcessEvents(updateNodeEvents)
 						assert.True(t, result)
@@ -257,7 +259,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 
 			// client list nodes
 			latestRVsByClient := make([]types.ResourceVersionMap, tt.clientNum)
-			nodesByClient := make([][]*types.Node, tt.clientNum)
+			nodesByClient := make([][]*types.LogicalNode, tt.clientNum)
 			wg.Add(tt.clientNum)
 
 			start = time.Now()
@@ -276,12 +278,13 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 					// check each node event
 					nodeIds := make(map[string]bool)
 					for _, node := range nodes {
-						assert.NotNil(t, node.GetLocation())
-						assert.True(t, latestRVs[*node.GetLocation()] >= node.GetResourceVersion())
-						if _, isOK := nodeIds[node.GetId()]; isOK {
+						nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+						assert.NotNil(t, nodeLoc)
+						assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+						if _, isOK := nodeIds[node.Id]; isOK {
 							assert.Fail(t, "List nodes cannot have more than one copy of a node")
 						} else {
-							nodeIds[node.GetId()] = true
+							nodeIds[node.Id] = true
 						}
 					}
 					assert.Equal(t, len(nodes), len(nodeIds))
@@ -323,16 +326,16 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 
 			// update nodes
 			for i := 0; i < tt.clientNum; i++ {
-				go func(expectedEventCount int, nodes []*types.Node, clientId string) {
+				go func(expectedEventCount int, nodes []*types.LogicalNode, clientId string) {
 					eventCount := 0
 
 					for j := 0; j < expectedEventCount/len(nodes)+2; j++ {
 						updateNodeEvents := make([]*event.NodeEvent, len(nodes))
 						for k := 0; k < len(nodes); k++ {
 							rvToGenerate += 1
-							updateNodeEvents[k] = event.NewNodeEvent(
-								types.NewNode(nodes[k].GetId(), strconv.Itoa(rvToGenerate), "", nodes[k].GetLocation()),
-								event.Modified)
+							newNode := nodes[k].Copy()
+							newNode.ResourceVersion = strconv.Itoa(rvToGenerate)
+							updateNodeEvents[k] = event.NewNodeEvent(newNode, event.Modified)
 
 							eventCount++
 							if eventCount >= expectedEventCount {
@@ -388,6 +391,22 @@ Processing 2000 AddNode events took 1.390383ms.
 Processing 20000 AddNode events took 11.794798ms.
 Processing 200000 AddNode events took 144.229808ms.
 Processing 2000000 AddNode events took 1.86103252s.
+
+Updated to logical node:
+Processing 20 AddNode events took 58.735µs.
+Processing 200 AddNode events took 182.211µs.
+Processing 2000 AddNode events took 1.663906ms.
+Processing 20000 AddNode events took 15.068522ms.
+Processing 200000 AddNode events took 179.720773ms.
+Processing 2000000 AddNode events took 2.324969732s. 24% increase. 8.16% get location from name (can be further optimized), 2% create ManagedNodeEvent
+
+Use int for region and resource partition field
+Processing 20 AddNode events took 46.946µs.
+Processing 200 AddNode events took 165.089µs.
+Processing 2000 AddNode events took 1.494359ms.
+Processing 20000 AddNode events took 13.193021ms.
+Processing 200000 AddNode events took 168.53739ms.
+Processing 2000000 AddNode events took 2.172339411s. 6.5% improvement
 */
 func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
 	distributor := setUp()
@@ -438,6 +457,22 @@ Processing 2000 AddNode events took 859.874µs.
 Processing 20000 AddNode events took 6.772558ms.
 Processing 200000 AddNode events took 109.476743ms.
 Processing 2000000 AddNode events took 1.21830443s.
+
+Updated to logical node:
+Processing 20 AddNode events took 123.203µs.
+Processing 200 AddNode events took 274.647µs.
+Processing 2000 AddNode events took 1.32293ms.
+Processing 20000 AddNode events took 9.247576ms.
+Processing 200000 AddNode events took 133.387737ms.
+Processing 2000000 AddNode events took 1.549799563s. - 27% increase
+
+Use int for region and resource partition field
+Processing 20 AddNode events took 94.507µs.
+Processing 200 AddNode events took 237.786µs.
+Processing 2000 AddNode events took 2.307846ms.
+Processing 20000 AddNode events took 8.299796ms.
+Processing 200000 AddNode events took 130.861087ms.
+Processing 2000000 AddNode events took 1.449320502s. - 6.5% improvement
 */
 func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 	distributor := setUp()

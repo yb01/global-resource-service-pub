@@ -22,6 +22,8 @@ var rvToGenerate = 0
 var singleTestLock = sync.Mutex{}
 
 var defaultLocBeijing_RP1 = location.NewLocation(location.Beijing, location.ResourcePartition1)
+var defaultRegion = location.Beijing
+var defaultPartition = location.ResourcePartition1
 
 const defaultVirtualStoreNumPerRP = 200 // 10K per resource partition, 50 hosts per virtual node store
 
@@ -120,6 +122,14 @@ Processing 1000 AddNode events took 667.154µs.
 Processing 10000 AddNode events took 5.899166ms.
 Processing 100000 AddNode events took 77.327117ms.
 Processing 1000000 AddNode events took 831.232514ms.
+
+Updated to logical node
+Processing 10 AddNode events took 51.792µs.
+Processing 100 AddNode events took 87.546µs.
+Processing 1000 AddNode events took 834.395µs.
+Processing 10000 AddNode events took 7.914261ms.
+Processing 100000 AddNode events took 106.144575ms.
+Processing 1000000 AddNode events took 1.170175248s. - latency increased 40%, will improve later
 */
 func TestAddNodes(t *testing.T) {
 	distributor := setUp()
@@ -150,27 +160,43 @@ func generateUpdateNodeEvents(originalEvents []*event.NodeEvent) []*event.NodeEv
 	for i := 0; i < len(originalEvents); i++ {
 		rvToGenerate += 1
 
-		newEvent := event.NewNodeEvent(types.NewNode(originalEvents[i].GetNode().GetId(), strconv.Itoa(rvToGenerate), "", originalEvents[i].GetNode().GetLocation()),
-			event.Modified)
+		lNode := &types.LogicalNode{
+			Id:              originalEvents[i].Node.Id,
+			ResourceVersion: strconv.Itoa(rvToGenerate),
+			GeoInfo: types.NodeGeoInfo{
+				Region:            types.RegionName(defaultRegion),
+				ResourcePartition: types.ResourcePartitionName(defaultPartition),
+			},
+		}
+
+		newEvent := event.NewNodeEvent(lNode, event.Modified)
 		result[i] = newEvent
 	}
 	return result
 }
 
-func generatedUpdateNodeEventsFromNodeList(nodes []*types.Node) []*event.NodeEvent {
+func generatedUpdateNodeEventsFromNodeList(nodes []*types.LogicalNode) []*event.NodeEvent {
 	result := make([]*event.NodeEvent, len(nodes))
 	for i := 0; i < len(nodes); i++ {
 		rvToGenerate += 1
-		newEvent := event.NewNodeEvent(types.NewNode(nodes[i].GetId(), strconv.Itoa(rvToGenerate), "", nodes[i].GetLocation()),
-			event.Modified)
+		node := nodes[i].Copy()
+		node.ResourceVersion = strconv.Itoa(rvToGenerate)
+		newEvent := event.NewNodeEvent(node, event.Modified)
 		result[i] = newEvent
 	}
 	return result
 }
 
-func createRandomNode(rv int, loc *location.Location) *types.Node {
+func createRandomNode(rv int, loc *location.Location) *types.LogicalNode {
 	id := uuid.New()
-	return types.NewNode(id.String(), strconv.Itoa(rv), "", loc)
+	return &types.LogicalNode{
+		Id:              id.String(),
+		ResourceVersion: strconv.Itoa(rv),
+		GeoInfo: types.NodeGeoInfo{
+			Region:            types.RegionName(loc.GetRegion()),
+			ResourcePartition: types.ResourcePartitionName(loc.GetResourcePartition()),
+		},
+	}
 }
 
 func TestUpdateNodes(t *testing.T) {
@@ -294,24 +320,25 @@ func TestRegistrationWorkflow(t *testing.T) {
 	// check each node event
 	nodeIds := make(map[string]bool)
 	for _, node := range nodes {
-		assert.NotNil(t, node.GetLocation())
-		assert.True(t, latestRVs[*node.GetLocation()] >= node.GetResourceVersion())
-		if _, isOK := nodeIds[node.GetId()]; isOK {
+		nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+		assert.NotNil(t, nodeLoc)
+		assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+		if _, isOK := nodeIds[node.Id]; isOK {
 			assert.Fail(t, "List nodes cannot have more than one copy of a node")
 		} else {
-			nodeIds[node.GetId()] = true
+			nodeIds[node.Id] = true
 		}
 	}
 	assert.Equal(t, len(nodes), len(nodeIds))
 
 	// update nodes
-	oldNodeRV := nodes[0].GetResourceVersion()
+	oldNodeRV := nodes[0].GetResourceVersionInt64()
 	updateNodeEvents := generatedUpdateNodeEventsFromNodeList(nodes)
 	result2, rvMap2 := distributor.ProcessEvents(updateNodeEvents)
 	assert.True(t, result2, "Expecting update nodes successfully")
-	loc := nodes[0].GetLocation()
+	loc := location.NewLocation(location.Region(nodes[0].GeoInfo.Region), location.ResourcePartition(nodes[0].GeoInfo.ResourcePartition))
 	assert.Equal(t, uint64(rvToGenerate), rvMap2[*loc])
-	assert.Equal(t, oldNodeRV, nodes[0].GetResourceVersion(), "Expecting listed nodes are snapshoted and cannot be affected by update")
+	assert.Equal(t, oldNodeRV, nodes[0].GetResourceVersionInt64(), "Expecting listed nodes are snapshoted and cannot be affected by update")
 
 	// client watch node update
 	watchCh := make(chan *event.NodeEvent)
@@ -324,7 +351,8 @@ func TestRegistrationWorkflow(t *testing.T) {
 	watchedEventCount := 0
 	for e := range watchCh {
 		assert.Equal(t, event.Modified, e.Type)
-		assert.Equal(t, loc, e.GetNode().GetLocation())
+		nodeLoc := location.NewLocation(location.Region(e.Node.GeoInfo.Region), location.ResourcePartition(e.Node.GeoInfo.ResourcePartition))
+		assert.Equal(t, loc, nodeLoc)
 		watchedEventCount++
 
 		if watchedEventCount >= len(nodes) {

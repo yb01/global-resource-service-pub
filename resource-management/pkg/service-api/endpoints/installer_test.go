@@ -10,11 +10,9 @@ import (
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
-	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/distributor"
 
 	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,8 +21,6 @@ var existedNodeId = make(map[uuid.UUID]bool)
 var rvToGenerate = 0
 
 var singleTestLock = sync.Mutex{}
-
-var defaultLocBeijing_RP1 = location.NewLocation(location.Beijing, location.ResourcePartition1)
 
 func setUp() *distributor.ResourceDistributor {
 	singleTestLock.Lock()
@@ -35,9 +31,17 @@ func tearDown(resourceDistributor *distributor.ResourceDistributor) {
 	defer singleTestLock.Unlock()
 }
 
-func createRandomNode(rv int) *types.Node {
+func createRandomNode(rv int) *types.LogicalNode {
 	id := uuid.New()
-	return types.NewNode(id.String(), strconv.Itoa(rv), "", defaultLocBeijing_RP1)
+
+	return &types.LogicalNode{
+		Id:              id.String(),
+		ResourceVersion: strconv.Itoa(rv),
+		GeoInfo: types.NodeGeoInfo{
+			Region:            0,
+			ResourcePartition: 0,
+		},
+	}
 }
 
 func generateAddNodeEvent(eventNum int) []*event.NodeEvent {

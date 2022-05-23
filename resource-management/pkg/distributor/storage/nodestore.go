@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"global-resource-service/resource-management/pkg/distributor/node"
 	"math"
 	"sync"
 
@@ -17,10 +18,10 @@ const (
 )
 
 type VirtualNodeStore struct {
-	mu         sync.RWMutex
-	nodeByHash map[float64]*types.Node
-	lowerbound float64
-	upperbound float64
+	mu              sync.RWMutex
+	nodeEventByHash map[float64]*node.ManagedNodeEvent
+	lowerbound      float64
+	upperbound      float64
 
 	// one virtual store can only have nodes from one resource partition
 	location location.Location
@@ -32,7 +33,7 @@ type VirtualNodeStore struct {
 func (vs *VirtualNodeStore) GetHostNum() int {
 	vs.mu.RLock()
 	defer vs.mu.RUnlock()
-	return len(vs.nodeByHash)
+	return len(vs.nodeEventByHash)
 }
 
 func (vs *VirtualNodeStore) GetLocation() location.Location {
@@ -65,14 +66,14 @@ func (vs *VirtualNodeStore) GetRange() (float64, float64) {
 	return vs.lowerbound, vs.upperbound
 }
 
-func (vs *VirtualNodeStore) SnapShot() ([]*types.Node, types.ResourceVersionMap) {
+func (vs *VirtualNodeStore) SnapShot() ([]*types.LogicalNode, types.ResourceVersionMap) {
 	vs.mu.RLock()
 	defer vs.mu.RUnlock()
-	nodesCopy := make([]*types.Node, len(vs.nodeByHash))
+	nodesCopy := make([]*types.LogicalNode, len(vs.nodeEventByHash))
 	index := 0
 	rvs := make(types.ResourceVersionMap)
-	for _, node := range vs.nodeByHash {
-		nodesCopy[index] = node.Copy()
+	for _, node := range vs.nodeEventByHash {
+		nodesCopy[index] = node.CopyNode()
 		newRV := node.GetResourceVersion()
 		if lastRV, isOK := rvs[*node.GetLocation()]; isOK {
 			if lastRV < newRV {
@@ -87,12 +88,14 @@ func (vs *VirtualNodeStore) SnapShot() ([]*types.Node, types.ResourceVersionMap)
 	return nodesCopy, rvs
 }
 
-func (vs *VirtualNodeStore) GetOneNode() *types.Node {
+func (vs *VirtualNodeStore) GenerateBookmarkEvent() *node.ManagedNodeEvent {
 	vs.mu.RLock()
 	defer vs.mu.RUnlock()
 
-	for _, n := range vs.nodeByHash {
-		return n.Copy()
+	for _, n := range vs.nodeEventByHash {
+		logicalNode := n.CopyNode()
+		nodeEvent := event.NewNodeEvent(logicalNode, event.Bookmark)
+		return node.NewManagedNodeEvent(nodeEvent, n.GetLocation())
 	}
 	return nil
 }
@@ -206,11 +209,11 @@ func (ns *NodeStore) generateVirtualNodeStores(vNodeNumPerRP int) {
 			for i := 0; i < vNodeNumPerRP; i++ {
 
 				(*ns.vNodeStores)[vNodeIndex] = &VirtualNodeStore{
-					mu:         sync.RWMutex{},
-					nodeByHash: make(map[float64]*types.Node, VirtualStoreInitSize),
-					lowerbound: lowerBound,
-					upperbound: lowerBound + ns.granularOfRing,
-					location:   *loc,
+					mu:              sync.RWMutex{},
+					nodeEventByHash: make(map[float64]*node.ManagedNodeEvent, VirtualStoreInitSize),
+					lowerbound:      lowerBound,
+					upperbound:      lowerBound + ns.granularOfRing,
+					location:        *loc,
 				}
 				lowerBound += ns.granularOfRing
 				vNodeIndex++
@@ -224,16 +227,16 @@ func (ns *NodeStore) generateVirtualNodeStores(vNodeNumPerRP int) {
 	(*ns.vNodeStores)[ns.virtualNodeNum-1].upperbound = location.RingRange
 }
 
-func (ns *NodeStore) CreateNode(nodeEvent *event.NodeEvent) {
-	hashValue, ringId := ns.getNodeHash(nodeEvent.GetNode())
+func (ns *NodeStore) CreateNode(nodeEvent *node.ManagedNodeEvent) {
+	hashValue, ringId := ns.getNodeHash(nodeEvent)
 	isNewNode := ns.addNodeToRing(hashValue, ringId, nodeEvent)
 	if !isNewNode {
 		ns.updateNodeInRing(hashValue, ringId, nodeEvent)
 	}
 }
 
-func (ns *NodeStore) UpdateNode(nodeEvent *event.NodeEvent) {
-	hashValue, ringId := ns.getNodeHash(nodeEvent.GetNode())
+func (ns *NodeStore) UpdateNode(nodeEvent *node.ManagedNodeEvent) {
+	hashValue, ringId := ns.getNodeHash(nodeEvent)
 	ns.updateNodeInRing(hashValue, ringId, nodeEvent)
 }
 
@@ -241,7 +244,7 @@ func (ns *NodeStore) UpdateNode(nodeEvent *event.NodeEvent) {
 func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
 }
 
-func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*event.NodeEvent) (bool, types.ResourceVersionMap) {
+func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent) (bool, types.ResourceVersionMap) {
 	for _, e := range nodeEvents {
 		if e == nil {
 			break
@@ -255,8 +258,8 @@ func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*event.NodeEvent) (bool, typ
 	return true, ns.GetCurrentResourceVersions()
 }
 
-func (ns *NodeStore) processNodeEvent(nodeEvent *event.NodeEvent) bool {
-	switch nodeEvent.Type {
+func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent) bool {
+	switch nodeEvent.GetEventType() {
 	case event.Added:
 		ns.CreateNode(nodeEvent)
 	case event.Modified:
@@ -266,10 +269,10 @@ func (ns *NodeStore) processNodeEvent(nodeEvent *event.NodeEvent) bool {
 	}
 
 	// Update ResourceVersionMap
-	newRV := nodeEvent.GetNode().GetResourceVersion()
-	region := nodeEvent.GetNode().GetLocation().GetRegion()
-	resourcePartition := nodeEvent.GetNode().GetLocation().GetResourcePartition()
+	newRV := nodeEvent.GetResourceVersion()
 	ns.rvLock.Lock()
+	region := nodeEvent.GetLocation().GetRegion()
+	resourcePartition := nodeEvent.GetLocation().GetResourcePartition()
 	if ns.currentRVs[region][resourcePartition] < newRV {
 		ns.currentRVs[region][resourcePartition] = newRV
 	}
@@ -280,7 +283,7 @@ func (ns *NodeStore) processNodeEvent(nodeEvent *event.NodeEvent) bool {
 
 // return location on the ring, and ring Id
 // ring Id is reserved for multiple rings
-func (ns *NodeStore) getNodeHash(node *types.Node) (float64, int) {
+func (ns *NodeStore) getNodeHash(node *node.ManagedNodeEvent) (float64, int) {
 	// map node id to uint32
 	initHashValue := hash.HashStrToUInt64(node.GetId())
 
@@ -299,10 +302,8 @@ func (ns *NodeStore) getNodeHash(node *types.Node) (float64, int) {
 	return lower + ringValue*(upper-lower), 0
 }
 
-func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *event.NodeEvent) (isNewNode bool) {
+func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *node.ManagedNodeEvent) (isNewNode bool) {
 	virtualNodeIndex := int(math.Floor(hashValue / ns.granularOfRing))
-	node := nodeEvent.GetNode()
-
 	vNodeStore := (*ns.vNodeStores)[virtualNodeIndex]
 	// add event to event queue
 	// During list snapshot, eventQueue will be locked first and virtual node stores will be locked later
@@ -314,15 +315,15 @@ func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *eve
 	vNodeStore.mu.Lock()
 	defer vNodeStore.mu.Unlock()
 
-	if oldNode, isOK := vNodeStore.nodeByHash[hashValue]; isOK {
-		if oldNode.GetId() != node.GetId() {
-			fmt.Printf("Found existing node (uuid %s) with same hash value %f. New node (uuid %s)\n", oldNode.GetId(), hashValue, node.GetId())
+	if oldNode, isOK := vNodeStore.nodeEventByHash[hashValue]; isOK {
+		if oldNode.GetId() != nodeEvent.GetId() {
+			fmt.Printf("Found existing node (uuid %s) with same hash value %f. New node (uuid %s)\n", oldNode.GetId(), hashValue, nodeEvent.GetId())
 			// TODO - put node into linked list
 		} else {
 			return false
 		}
 	}
-	vNodeStore.nodeByHash[hashValue] = node
+	vNodeStore.nodeEventByHash[hashValue] = nodeEvent
 
 	ns.hostNumLock.Lock()
 	ns.totalHostNum++
@@ -331,10 +332,8 @@ func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *eve
 	return true
 }
 
-func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *event.NodeEvent) {
+func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *node.ManagedNodeEvent) {
 	virtualNodeIndex := int(math.Floor(hashValue / ns.granularOfRing))
-	node := nodeEvent.GetNode()
-
 	vNodeStore := (*ns.vNodeStores)[virtualNodeIndex]
 	// add event to event queue
 	// During list snapshot, eventQueue will be locked first and virtual node stores will be locked later
@@ -344,20 +343,20 @@ func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *
 	}
 
 	vNodeStore.mu.Lock()
-	if oldNode, isOK := vNodeStore.nodeByHash[hashValue]; isOK {
+	if oldNode, isOK := vNodeStore.nodeEventByHash[hashValue]; isOK {
 		// TODO - check uuid to make sure updating right node
-		if oldNode.GetId() == node.GetId() {
-			if oldNode.GetResourceVersion() < node.GetResourceVersion() {
-				vNodeStore.nodeByHash[hashValue] = node
+		if oldNode.GetId() == nodeEvent.GetId() {
+			if oldNode.GetResourceVersion() < nodeEvent.GetResourceVersion() {
+				vNodeStore.nodeEventByHash[hashValue] = nodeEvent
 			} else {
-				fmt.Printf("Discard node update events due to resource version is older: %d. Existing rv %d", node.GetResourceVersion(), oldNode.GetResourceVersion())
+				fmt.Printf("Discard node update events due to resource version is older: %d. Existing rv %d", nodeEvent.GetResourceVersion(), oldNode.GetResourceVersion())
 				vNodeStore.mu.Unlock()
 				return
 			}
 		} else {
 			// TODO - check linked list to get right
 			fmt.Printf("Updating node got same hash value (%f) but different node id: (%s and %s)", hashValue,
-				oldNode.GetId(), node.GetId())
+				oldNode.GetId(), nodeEvent.GetId())
 		}
 
 		vNodeStore.mu.Unlock()

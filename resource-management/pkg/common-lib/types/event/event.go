@@ -15,16 +15,12 @@ const (
 
 type NodeEvent struct {
 	Type EventType
-	node *types.Node
+	Node *types.LogicalNode
 }
 
-func NewNodeEvent(node *types.Node, eventType EventType) *NodeEvent {
+func NewNodeEvent(node *types.LogicalNode, eventType EventType) *NodeEvent {
 	return &NodeEvent{
 		Type: eventType,
-		node: node,
+		Node: node,
 	}
-}
-
-func (e *NodeEvent) GetNode() *types.Node {
-	return e.node
 }

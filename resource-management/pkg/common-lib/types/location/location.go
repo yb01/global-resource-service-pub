@@ -16,6 +16,15 @@ func NewLocation(region Region, partition ResourcePartition) *Location {
 	}
 }
 
+func NewLocationFromName(regionName, partitionName string) *Location {
+	region := GetRegionFromRegionName(regionName)
+	partition := GetPartitionFromPartitionName(partitionName)
+	if region >= 0 && partition >= 0 {
+		return NewLocation(region, partition)
+	}
+	return nil
+}
+
 type arc struct {
 	lower float64
 	upper float64
@@ -38,33 +47,45 @@ const (
 	Reserved5 Region = 8
 )
 
-func (r Region) String() string {
-	switch r {
-	case Beijing:
-		return "Beijing"
-	case Shanghai:
-		return "Shanghai"
-	case Wulan:
-		return "Wulan"
-	case Guizhou:
-		return "Guizhou"
-	case Reserved1:
-		return "Reserved1"
-	case Reserved2:
-		return "Reserved2"
-	case Reserved3:
-		return "Reserved3"
-	case Reserved4:
-		return "Reserved4"
-	case Reserved5:
-		return "Reserved5"
-	}
-	return "undefined"
+// later this map will be construction from config
+var regionToRegionName = map[Region]string{
+	Beijing:   "Beijing",
+	Shanghai:  "Shanghai",
+	Wulan:     "Wulan",
+	Guizhou:   "Guizhou",
+	Reserved1: "Reserved1",
+	Reserved2: "Reserved2",
+	Reserved3: "Reserved3",
+	Reserved4: "Reserved4",
+	Reserved5: "Reserved5",
 }
 
-var Regions = []Region{Beijing, Shanghai, Wulan, Guizhou, Reserved1, Reserved2, Reserved3, Reserved4, Reserved5}
+// later this map will be construction from config
+var regionNameToRegion = map[string]Region{
+	"Beijing":   Beijing,
+	"Shanghai":  Shanghai,
+	"Wulan":     Wulan,
+	"Guizhou":   Guizhou,
+	"Reserved1": Reserved1,
+	"Reserved2": Reserved2,
+	"Reserved3": Reserved3,
+	"Reserved4": Reserved4,
+	"Reserved5": Reserved5,
+}
 
-var regionToArc map[string]arc
+func (r Region) String() string {
+	return regionToRegionName[r]
+}
+
+func GetRegionFromRegionName(regionName string) Region {
+	if r, isOK := regionNameToRegion[regionName]; isOK {
+		return r
+	} else {
+		return -1 // undefined
+	}
+}
+
+var Regions = []Region{}
 
 // ResourcePartition defines the possible resource partition of a given node
 // Defined and doced by region admin
@@ -93,60 +114,81 @@ const (
 	ResourcePartition20 ResourcePartition = 19
 )
 
-func (rp ResourcePartition) String() string {
-	switch rp {
-	case ResourcePartition1:
-		return "RP1"
-	case ResourcePartition2:
-		return "RP2"
-	case ResourcePartition3:
-		return "RP3"
-	case ResourcePartition4:
-		return "RP4"
-	case ResourcePartition5:
-		return "RP5"
-	case ResourcePartition6:
-		return "RP6"
-	case ResourcePartition7:
-		return "RP7"
-	case ResourcePartition8:
-		return "RP8"
-	case ResourcePartition9:
-		return "RP9"
-	case ResourcePartition10:
-		return "RP10"
-	case ResourcePartition11:
-		return "RP11"
-	case ResourcePartition12:
-		return "RP12"
-	case ResourcePartition13:
-		return "RP13"
-	case ResourcePartition14:
-		return "RP14"
-	case ResourcePartition15:
-		return "RP15"
-	case ResourcePartition16:
-		return "RP16"
-	case ResourcePartition17:
-		return "RP17"
-	case ResourcePartition18:
-		return "RP18"
-	case ResourcePartition19:
-		return "RP19"
-	case ResourcePartition20:
-		return "RP20"
-	}
-	return "undefined"
+// later this map will be construction from config
+var partitionToPartitionName = map[ResourcePartition]string{
+	ResourcePartition1:  "RP1",
+	ResourcePartition2:  "RP2",
+	ResourcePartition3:  "RP3",
+	ResourcePartition4:  "RP4",
+	ResourcePartition5:  "RP5",
+	ResourcePartition6:  "RP6",
+	ResourcePartition7:  "RP7",
+	ResourcePartition8:  "RP8",
+	ResourcePartition9:  "RP9",
+	ResourcePartition10: "RP10",
+	ResourcePartition11: "RP11",
+	ResourcePartition12: "RP12",
+	ResourcePartition13: "RP13",
+	ResourcePartition14: "RP14",
+	ResourcePartition15: "RP15",
+	ResourcePartition16: "RP16",
+	ResourcePartition17: "RP17",
+	ResourcePartition18: "RP18",
+	ResourcePartition19: "RP19",
+	ResourcePartition20: "RP20",
 }
 
-var ResourcePartitions = []ResourcePartition{ResourcePartition1, ResourcePartition2, ResourcePartition3, ResourcePartition4, ResourcePartition5,
-	ResourcePartition6, ResourcePartition7, ResourcePartition8, ResourcePartition9, ResourcePartition10, ResourcePartition11, ResourcePartition12,
-	ResourcePartition13, ResourcePartition14, ResourcePartition15, ResourcePartition16, ResourcePartition17, ResourcePartition18, ResourcePartition19,
-	ResourcePartition20}
+// later this map will be constructed from config
+var partitionNameToPartition = map[string]ResourcePartition{
+	"RP1":  ResourcePartition1,
+	"RP2":  ResourcePartition2,
+	"RP3":  ResourcePartition3,
+	"RP4":  ResourcePartition4,
+	"RP5":  ResourcePartition5,
+	"RP6":  ResourcePartition6,
+	"RP7":  ResourcePartition7,
+	"RP8":  ResourcePartition8,
+	"RP9":  ResourcePartition9,
+	"RP10": ResourcePartition10,
+	"RP11": ResourcePartition11,
+	"RP12": ResourcePartition12,
+	"RP13": ResourcePartition13,
+	"RP14": ResourcePartition14,
+	"RP15": ResourcePartition15,
+	"RP16": ResourcePartition16,
+	"RP17": ResourcePartition17,
+	"RP18": ResourcePartition18,
+	"RP19": ResourcePartition19,
+	"RP20": ResourcePartition20,
+}
 
+func (rp ResourcePartition) String() string {
+	return partitionToPartitionName[rp]
+}
+
+func GetPartitionFromPartitionName(partitionName string) ResourcePartition {
+	if partition, isOK := partitionNameToPartition[partitionName]; isOK {
+		return partition
+	} else {
+		return -1 //undefined
+	}
+}
+
+var ResourcePartitions = []ResourcePartition{}
+
+var regionToArc map[string]arc
 var regionRPToArc map[Location]arc
 
 func init() {
+	// initialize Regions
+	for i := 0; i < len(regionToRegionName); i++ {
+		Regions = append(Regions, Region(i))
+	}
+	// initialize ResourcePartitions
+	for i := 0; i < len(partitionToPartitionName); i++ {
+		ResourcePartitions = append(ResourcePartitions, ResourcePartition(i))
+	}
+
 	regionRPToArc = make(map[Location]arc)
 	regionGrain := RingRange / float64(len(Regions))
 

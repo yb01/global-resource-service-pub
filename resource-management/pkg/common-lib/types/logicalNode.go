@@ -1,8 +1,15 @@
 package types
 
+import (
+	"fmt"
+	"strconv"
+)
+
 // for now, simply define those as string
-type RegionName string
-type ResourcePartitionName string
+// RegionName and ResourcePartitionName are updated to int per initial performance test of distributor ProcessEvents
+// Later the data type might be changed back to string due to further performance evaluation result
+type RegionName int
+type ResourcePartitionName int
 type DataCenterName string
 type AvailabilityZoneName string
 type FaultDomainName string
@@ -85,6 +92,29 @@ type LogicalNode struct {
 	// defined as highend, lowend, medium as an example
 	// TBD for post 630
 	MachineType NodeMachineType
+}
+
+func (n *LogicalNode) Copy() *LogicalNode {
+	return &LogicalNode{
+		Id:                   n.Id,
+		ResourceVersion:      n.ResourceVersion,
+		GeoInfo:              n.GeoInfo,
+		Taints:               n.Taints,
+		SpecialHardwareTypes: n.SpecialHardwareTypes,
+		AllocatableResource:  n.AllocatableResource,
+		Conditions:           n.Conditions,
+		Reserved:             n.Reserved,
+		MachineType:          n.MachineType,
+	}
+}
+
+func (n *LogicalNode) GetResourceVersionInt64() uint64 {
+	rv, err := strconv.ParseUint(n.ResourceVersion, 10, 64)
+	if err != nil {
+		fmt.Printf("Unable to convert resource version %s to uint64\n", n.ResourceVersion)
+		return 0
+	}
+	return rv
 }
 
 type NodeMachineType string

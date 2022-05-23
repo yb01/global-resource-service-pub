@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"strconv"
+	"global-resource-service/resource-management/pkg/distributor/node"
 	"sync"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
@@ -131,9 +131,7 @@ func (dis *ResourceDistributor) addBookmarkEvent(stores []*storage.VirtualNodeSt
 		if _, isOK := locations[loc]; !isOK {
 			locations[loc] = true
 
-			node := types.NewNode("", strconv.FormatUint(store.GetOneNode().GetResourceVersion(), 10), "", &loc)
-			bookmarkEvent := event.NewNodeEvent(node, event.Bookmark)
-			eventQueue.EnqueueEvent(bookmarkEvent)
+			eventQueue.EnqueueEvent(store.GenerateBookmarkEvent())
 		}
 	}
 }
@@ -153,7 +151,7 @@ func (dis *ResourceDistributor) getSortedVirtualStores(stores map[*storage.Virtu
 	return sortedStores
 }
 
-func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Node, types.ResourceVersionMap, error) {
+func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.LogicalNode, types.ResourceVersionMap, error) {
 	if clientId == "" {
 		return nil, nil, errors.New("Empty clientId")
 	}
@@ -169,7 +167,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.No
 	}
 
 	eventQueue.AcquireSnapshotRLock()
-	nodesByStore := make([][]*types.Node, len(assignedStores))
+	nodesByStore := make([][]*types.LogicalNode, len(assignedStores))
 	rvMapByStore := make([]types.ResourceVersionMap, len(assignedStores))
 	hostCount := 0
 	for i := 0; i < len(assignedStores); i++ {
@@ -179,7 +177,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.No
 	eventQueue.ReleaseSnapshotRLock()
 
 	// combine to single array of nodeEvent
-	nodes := make([]*types.Node, hostCount)
+	nodes := make([]*types.LogicalNode, hostCount)
 	index := 0
 	for i := 0; i < len(nodesByStore); i++ {
 		for j := 0; j < len(nodesByStore[i]); j++ {
@@ -226,6 +224,19 @@ func (dis *ResourceDistributor) Watch(clientId string, rvs types.ResourceVersion
 }
 
 func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, types.ResourceVersionMap) {
-	result, rvMap := dis.defaultNodeStore.ProcessNodeEvents(events)
+	eventsToProcess := make([]*node.ManagedNodeEvent, len(events))
+	for i := 0; i < len(events); i++ {
+		if events[i] != nil {
+			loc := location.NewLocation(location.Region(events[i].Node.GeoInfo.Region), location.ResourcePartition(events[i].Node.GeoInfo.ResourcePartition))
+			if loc != nil {
+				eventsToProcess[i] = node.NewManagedNodeEvent(events[i], loc)
+			} else {
+				fmt.Printf("Invalid region %v and/or resource partition %v\n", events[i].Node.GeoInfo.Region, events[i].Node.GeoInfo.ResourcePartition)
+			}
+		} else {
+			break
+		}
+	}
+	result, rvMap := dis.defaultNodeStore.ProcessNodeEvents(eventsToProcess)
 	return result, rvMap
 }
