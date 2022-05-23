@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"global-resource-service/resource-management/pkg/distributor/node"
+	"k8s.io/klog/v2"
 	"math"
 	"sync"
 
@@ -11,6 +11,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/distributor/cache"
+	"global-resource-service/resource-management/pkg/distributor/node"
 )
 
 const (
@@ -129,7 +130,7 @@ type NodeStore struct {
 }
 
 func NewNodeStore(vNodeNumPerRP int, regionNum int, partitionMaxNum int) *NodeStore {
-	fmt.Printf("Initialize node store with virtual node per RP: %d\n", vNodeNumPerRP)
+	klog.V(3).Infof("Initialize node store with virtual node per RP: %d\n", vNodeNumPerRP)
 
 	totalVirtualNodeNum := vNodeNumPerRP * regionNum * partitionMaxNum
 	virtualNodeStores := make([]*VirtualNodeStore, totalVirtualNodeNum)
@@ -317,7 +318,7 @@ func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *nod
 
 	if oldNode, isOK := vNodeStore.nodeEventByHash[hashValue]; isOK {
 		if oldNode.GetId() != nodeEvent.GetId() {
-			fmt.Printf("Found existing node (uuid %s) with same hash value %f. New node (uuid %s)\n", oldNode.GetId(), hashValue, nodeEvent.GetId())
+			klog.V(3).Infof("Found existing node (uuid %s) with same hash value %f. New node (uuid %s)\n", oldNode.GetId(), hashValue, nodeEvent.GetId())
 			// TODO - put node into linked list
 		} else {
 			return false
@@ -349,13 +350,13 @@ func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *
 			if oldNode.GetResourceVersion() < nodeEvent.GetResourceVersion() {
 				vNodeStore.nodeEventByHash[hashValue] = nodeEvent
 			} else {
-				fmt.Printf("Discard node update events due to resource version is older: %d. Existing rv %d", nodeEvent.GetResourceVersion(), oldNode.GetResourceVersion())
+				klog.V(3).Infof("Discard node update events due to resource version is older: %d. Existing rv %d", nodeEvent.GetResourceVersion(), oldNode.GetResourceVersion())
 				vNodeStore.mu.Unlock()
 				return
 			}
 		} else {
 			// TODO - check linked list to get right
-			fmt.Printf("Updating node got same hash value (%f) but different node id: (%s and %s)", hashValue,
+			klog.V(3).Infof("Updating node got same hash value (%f) but different node id: (%s and %s)", hashValue,
 				oldNode.GetId(), nodeEvent.GetId())
 		}
 

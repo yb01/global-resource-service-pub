@@ -2,8 +2,8 @@ package aggregrator
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"k8s.io/klog/v2"
 	"net/http"
 	"strings"
 	"time"
@@ -63,7 +63,7 @@ func NewAggregator(urls []string, EventProcessor distributor.Interface) *Aggrega
 func (a *Aggregator) Run() {
 	numberOfURLs := len(a.urls)
 
-	fmt.Println("Running for loop to connect to to resource region manager...")
+	klog.V(3).Infof("Running for loop to connect to to resource region manager...")
 
 	for i := 0; i < numberOfURLs; i++ {
 		go func(i int) {
@@ -98,7 +98,7 @@ func (a *Aggregator) Run() {
 		}(i)
 	}
 
-	fmt.Println("Finished for loop to connect to to resource region manager...")
+	klog.V(3).Infof("Finished for loop to connect to to resource region manager...")
 }
 
 // Connect to resource region manager
@@ -128,26 +128,26 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength int, c
 	bytes, _ := json.Marshal(PullDataFromRRM{BatchLength: batchLength, CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodGet, path, strings.NewReader((string(bytes))))
 	if err != nil {
-		fmt.Print(err.Error())
+		klog.Errorf(err.Error())
 	}
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		fmt.Print(err.Error())
+		klog.Errorf(err.Error())
 	}
 
 	defer resp.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Print(err.Error())
+		klog.Errorf(err.Error())
 	}
 
 	var ResponseObject ResponseFromRRM
 	err = json.Unmarshal(bodyBytes, &ResponseObject)
 	if err != nil {
-		fmt.Println("Error from JSON Unmarshal:", err)
+		klog.Errorf("Error from JSON Unmarshal:", err)
 	}
 
 	return ResponseObject.MinRecordNodeEvents, ResponseObject.Length
@@ -162,7 +162,7 @@ func (a *Aggregator) postCRV(c *ClientOfRRM, crv types.ResourceVersionMap) error
 	req, err := http.NewRequest(http.MethodPost, path, strings.NewReader((string(bytes))))
 
 	if err != nil {
-		fmt.Print(err.Error())
+		klog.Errorf(err.Error())
 	}
 
 	req.Header.Add("Accept", "application/json")

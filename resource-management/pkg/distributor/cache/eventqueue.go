@@ -3,6 +3,7 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"k8s.io/klog/v2"
 	"sort"
 	"sync"
 
@@ -166,7 +167,7 @@ func (eq *NodeEventQueue) Watch(rvs types.ResourceVersionMap, clientWatchChan ch
 			select {
 			case <-stopCh:
 				eq.watchChan = nil
-				fmt.Printf("Watch stopped due to client request")
+				klog.V(3).Infof("Watch stopped due to client request")
 				return
 			case event, ok := <-upstreamCh:
 				if !ok {

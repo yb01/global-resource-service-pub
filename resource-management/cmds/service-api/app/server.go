@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -9,11 +8,12 @@ import (
 	"global-resource-service/resource-management/pkg/service-api/endpoints"
 
 	"github.com/gorilla/mux"
+	"k8s.io/klog/v2"
 )
 
 // Run and create new service-api.  This should never exit.
 func Run() error {
-	fmt.Printf("Starting the API server...")
+	klog.V(3).Infof("Starting the API server...")
 
 	r := mux.NewRouter().StrictSlash(true)
 

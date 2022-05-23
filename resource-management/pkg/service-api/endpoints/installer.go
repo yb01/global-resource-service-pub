@@ -3,7 +3,7 @@ package endpoints
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
+	"k8s.io/klog/v2"
 	"net/http"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
@@ -21,7 +21,7 @@ func init() {
 }
 
 func ResourceHandler(resp http.ResponseWriter, req *http.Request) {
-	log.Printf("handle /resource. URL path: %s", req.URL.Path)
+	klog.V(3).Infof("handle /resource. URL path: %s", req.URL.Path)
 
 	switch req.Method {
 	case http.MethodGet:
@@ -39,9 +39,9 @@ func ResourceHandler(resp http.ResponseWriter, req *http.Request) {
 		nodes, _, err := dist.ListNodesForClient(clientId)
 
 		ret, err := json.Marshal(nodes)
-		log.Printf("node ret: %s", ret)
+		klog.V(3).Infof("node ret: %s", ret)
 		if err != nil {
-			log.Printf("error read get node list. error %v", err)
+			klog.V(3).Infof("error read get node list. error %v", err)
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -62,7 +62,7 @@ func ResourceHandler(resp http.ResponseWriter, req *http.Request) {
 // TODO: error code and string definition
 //
 func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
-	log.Printf("Serving watch for client: %s", clientId)
+	klog.V(3).Infof("Serving watch for client: %s", clientId)
 
 	// For 630 distributor impl, watchChannel and stopChannel passed into the Watch routine from API layer
 	watchCh := make(chan *event.NodeEvent, WatchChannelSize)
@@ -74,7 +74,7 @@ func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 	// read request body and get the crv
 	crvMap, err := getResourceVersionsMap(req)
 	if err != nil {
-		log.Printf("uUable to get the resource versions. Error %v", err)
+		klog.Errorf("uUable to get the resource versions. Error %v", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -82,7 +82,7 @@ func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 	// start the watcher
 	err = dist.Watch(clientId, crvMap, watchCh, stopCh)
 	if err != nil {
-		log.Printf("uUable to start the watch at store. Error %v", err)
+		klog.Errorf("uUable to start the watch at store. Error %v", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -90,7 +90,7 @@ func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 	done := req.Context().Done()
 	flusher, ok := resp.(http.Flusher)
 	if !ok {
-		log.Printf("unable to start watch - can't get http.Flusher")
+		klog.Errorf("unable to start watch - can't get http.Flusher")
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -112,7 +112,7 @@ func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 			}
 
 			if err := json.NewEncoder(resp).Encode(*record.GetNode()); err != nil {
-				log.Printf("encoding record failed. error %v", err)
+				klog.V(3).Infof("encoding record failed. error %v", err)
 				resp.WriteHeader(http.StatusInternalServerError)
 				return
 			}

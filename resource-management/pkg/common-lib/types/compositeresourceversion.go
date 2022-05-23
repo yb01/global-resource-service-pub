@@ -1,6 +1,19 @@
 package types
 
-import "global-resource-service/resource-management/pkg/common-lib/types/location"
+import (
+	"flag"
+	"k8s.io/klog/v2"
+
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
+)
+
+// in case of UT or test uses the klog along with the t.log
+func init() {
+	if !flag.Parsed() {
+		klog.InitFlags(nil)
+		flag.Parse()
+	}
+}
 
 type CompositeResourceVersion struct {
 	RegionId            string
