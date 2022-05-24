@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"k8s.io/klog/v2"
-	"strconv"
 	"sync"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"

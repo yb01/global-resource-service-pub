@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"k8s.io/klog/v2"
 	"math"
 	"sync"

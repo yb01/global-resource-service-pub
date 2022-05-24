@@ -111,7 +111,7 @@ func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 				return
 			}
 
-			if err := json.NewEncoder(resp).Encode(*record.GetNode()); err != nil {
+			if err := json.NewEncoder(resp).Encode(*record.Node); err != nil {
 				klog.V(3).Infof("encoding record failed. error %v", err)
 				resp.WriteHeader(http.StatusInternalServerError)
 				return
