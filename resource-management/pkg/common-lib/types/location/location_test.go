@@ -3,6 +3,7 @@ package location
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/klog/v2"
 	"math/rand"
 	"testing"
 	"time"
@@ -41,6 +42,8 @@ func TestLocationInit(t *testing.T) {
 		}
 	}
 	fmt.Printf("All hash range listed as follows:\n")
+	klog.Infof("klog All hash range listed as follows:\n")
+	t.Logf("tlog All hash range listed as follows:\n")
 	printLocationRange()
 }
 

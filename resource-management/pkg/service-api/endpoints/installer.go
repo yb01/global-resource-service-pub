@@ -6,21 +6,21 @@ import (
 	"k8s.io/klog/v2"
 	"net/http"
 
+	di "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
-	"global-resource-service/resource-management/pkg/distributor"
 	apiTypes "global-resource-service/resource-management/pkg/service-api/types"
 )
 
-//TODO: will move construction of the distributor to main function once each components has basic structures in
-
-var dist = &distributor.ResourceDistributor{}
-
-func init() {
-	dist = distributor.GetResourceDistributor()
+type Installer struct {
+	dist di.Interface
 }
 
-func ResourceHandler(resp http.ResponseWriter, req *http.Request) {
+func NewInstaller(d di.Interface) *Installer {
+	return &Installer{d}
+}
+
+func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request) {
 	klog.V(3).Infof("handle /resource. URL path: %s", req.URL.Path)
 
 	switch req.Method {
@@ -29,14 +29,14 @@ func ResourceHandler(resp http.ResponseWriter, req *http.Request) {
 		clientId := ctx.Value("clientid").(string)
 
 		if req.URL.Query().Get(WatchParameter) == WatchParameterTrue {
-			serverWatch(resp, req, clientId)
+			i.serverWatch(resp, req, clientId)
 			return
 		}
 
 		resp.WriteHeader(http.StatusOK)
 		resp.Header().Set("Content-Type", "text/plain")
 
-		nodes, _, err := dist.ListNodesForClient(clientId)
+		nodes, _, err := i.dist.ListNodesForClient(clientId)
 
 		ret, err := json.Marshal(nodes)
 		klog.V(3).Infof("node ret: %s", ret)
@@ -61,7 +61,7 @@ func ResourceHandler(resp http.ResponseWriter, req *http.Request) {
 // TODO: with serialization options
 // TODO: error code and string definition
 //
-func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
+func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 	klog.V(3).Infof("Serving watch for client: %s", clientId)
 
 	// For 630 distributor impl, watchChannel and stopChannel passed into the Watch routine from API layer
@@ -80,7 +80,7 @@ func serverWatch(resp http.ResponseWriter, req *http.Request, clientId string) {
 	}
 
 	// start the watcher
-	err = dist.Watch(clientId, crvMap, watchCh, stopCh)
+	err = i.dist.Watch(clientId, crvMap, watchCh, stopCh)
 	if err != nil {
 		klog.Errorf("uUable to start the watch at store. Error %v", err)
 		resp.WriteHeader(http.StatusInternalServerError)

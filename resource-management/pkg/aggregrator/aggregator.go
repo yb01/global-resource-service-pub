@@ -57,10 +57,10 @@ func NewAggregator(urls []string, EventProcessor distributor.Interface) *Aggrega
 // Main loop to get resources from resource region managers and send to distributor
 // This is only initial code structure for aggregator method
 // TODO:
-//    Based on the speed of process events from resource distributor, dynamic descision of batch length
+//    Based on the speed of process events from resource distributor, dynamic decision of batch length
 //    will be made by aggregator and this batch length will be used to pull resources from resource region manager
-//
-func (a *Aggregator) Run() {
+// TODO: error handling
+func (a *Aggregator) Run() (err error) {
 	numberOfURLs := len(a.urls)
 
 	klog.V(3).Infof("Running for loop to connect to to resource region manager...")
@@ -99,6 +99,7 @@ func (a *Aggregator) Run() {
 	}
 
 	klog.V(3).Infof("Finished for loop to connect to to resource region manager...")
+	return nil
 }
 
 // Connect to resource region manager
