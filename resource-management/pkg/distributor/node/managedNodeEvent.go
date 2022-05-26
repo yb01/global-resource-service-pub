@@ -1,7 +1,7 @@
 package node
 
 import (
-	"fmt"
+	"k8s.io/klog/v2"
 	"strconv"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
@@ -44,7 +44,7 @@ func (n *ManagedNodeEvent) GetLocation() *location.Location {
 func (n *ManagedNodeEvent) GetResourceVersion() uint64 {
 	rv, err := strconv.ParseUint(n.nodeEvent.Node.ResourceVersion, 10, 64)
 	if err != nil {
-		fmt.Printf("Unable to convert resource version %s to uint64\n", n.nodeEvent.Node.ResourceVersion)
+		klog.Errorf("Unable to convert resource version %s to uint64\n", n.nodeEvent.Node.ResourceVersion)
 		return 0
 	}
 	return rv

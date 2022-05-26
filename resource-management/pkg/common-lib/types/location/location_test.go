@@ -3,7 +3,6 @@ package location
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/klog/v2"
 	"math/rand"
 	"testing"
 	"time"
@@ -32,8 +31,8 @@ func TestLocationInit(t *testing.T) {
 			lower, upper := loc.GetArcRangeFromLocation()
 			if preLower >= lower || preUpper >= upper || lower < 0 || upper > RingRange || (preUpper > 0 && preUpper != lower) {
 				assert.Fail(t, "Invalid ranges for region/resource paritions", "RP %s has unexpected hash range (%f, %f]\n\n", loc.partition, lower, upper)
-				fmt.Printf("All hash range listed as follows:\n")
-				printLocationRange()
+				t.Log("All hash range listed as follows:\n")
+				printLocationRange(t)
 				assert.Fail(t, "")
 			}
 
@@ -41,13 +40,11 @@ func TestLocationInit(t *testing.T) {
 			preUpper = upper
 		}
 	}
-	fmt.Printf("All hash range listed as follows:\n")
-	klog.Infof("klog All hash range listed as follows:\n")
-	t.Logf("tlog All hash range listed as follows:\n")
-	printLocationRange()
+	t.Logf("All hash range listed as follows:\n")
+	printLocationRange(t)
 }
 
-func printLocationRange() {
+func printLocationRange(t *testing.T) {
 	for i := 0; i < len(Regions); i++ {
 		region := Regions[i]
 		rps := GetRPsForRegion(region)
@@ -58,7 +55,7 @@ func printLocationRange() {
 				partition: rp,
 			}
 			lower, upper := loc.GetArcRangeFromLocation()
-			fmt.Printf("%s, %s, [%f, %f]\n", region, rp, lower, upper)
+			t.Logf("%s, %s, [%f, %f]\n", region, rp, lower, upper)
 		}
 	}
 }
@@ -82,7 +79,7 @@ func TestGetLocationRangeByStruct_Performance(t *testing.T) {
 			loc.GetArcRangeFromLocation()
 		}
 		duration := time.Since(start)
-		fmt.Printf("Get location range %d times in %v\n", count[i], duration)
+		t.Logf("Get location range %d times in %v\n", count[i], duration)
 	}
 }
 
@@ -113,7 +110,7 @@ func TestGetLocationRangeByPointer_Performance(t *testing.T) {
 			loc.GetArcRangeFromLocation()
 		}
 		duration := time.Since(start)
-		fmt.Printf("Get location range %d times in %v\n", count[i], duration)
+		t.Logf("Get location range %d times in %v\n", count[i], duration)
 	}
 }
 
@@ -147,6 +144,6 @@ func TestGetLocationRangeByObject_Performance(t *testing.T) {
 			loc.GetArcRangeFromLocation()
 		}
 		duration := time.Since(start)
-		fmt.Printf("Get location range %d times in %v\n", count[i], duration)
+		t.Logf("Get location range %d times in %v\n", count[i], duration)
 	}
 }

@@ -1,7 +1,6 @@
 package distributor
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"sync"
@@ -87,7 +86,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 				assert.Nil(t, err)
 				assert.NotNil(t, latestRVs)
 				assert.True(t, len(nodes) >= tt.hostPerClient)
-				// fmt.Printf("Client %d %s latest rvs: %v.Total hosts: %d\n", i, clientId, latestRVs, len(nodes))
+				// t.Logf("Client %d %s latest rvs: %v.Total hosts: %d\n", i, clientId, latestRVs, len(nodes))
 				latestRVsByClient[i] = latestRVs
 				nodesByClient[i] = nodes
 
@@ -149,7 +148,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 						result, rvMap := distributor.ProcessEvents(updateNodeEvents)
 						assert.True(t, result)
 						assert.NotNil(t, rvMap)
-						//fmt.Printf("Successfully processed %d update node events. RV map returned: %v. ClientId %s\n", len(nodes), rvMap, clientId)
+						//t.Logf("Successfully processed %d update node events. RV map returned: %v. ClientId %s\n", len(nodes), rvMap, clientId)
 					}
 				}(tt.updateEventNum, nodesByClient[i], clientIds[i])
 			}
@@ -157,7 +156,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			// wait for watch done
 			allWaitGroup.Wait()
 			duration += time.Since(start)
-			fmt.Printf("Test %s succeed! Total duration %v\n", tt.name, duration)
+			t.Logf("Test %s succeed! Total duration %v\n", tt.name, duration)
 		})
 	}
 }
@@ -220,7 +219,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 				}
 			}
 
-			wg := &sync.WaitGroup{}
+			wg := new(sync.WaitGroup)
 			wg.Add(tt.regionNum * tt.rpNum)
 
 			start := time.Now()
@@ -271,7 +270,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 					assert.Nil(t, err)
 					assert.NotNil(t, latestRVs)
 					assert.True(t, len(nodes) >= tt.hostPerClient)
-					// fmt.Printf("Client %d %s latest rvs: %v.Total hosts: %d\n", i, clientId, latestRVs, len(nodes))
+					// t.Logf("Client %d %s latest rvs: %v.Total hosts: %d\n", i, clientId, latestRVs, len(nodes))
 					latestRVsByClient[i] = latestRVs
 					nodesByClient[i] = nodes
 
@@ -315,14 +314,14 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 
 						if eventCount >= expectedEventCount {
 							wg.Done()
-							fmt.Printf("Successfully watched %d update node events.**************************\n", expectedEventCount)
+							t.Logf("Successfully watched %d update node events.**************************\n", expectedEventCount)
 							return
 						}
 					}
 				}(tt.updateEventNum, watchCh, allWaitGroup)
 			}
 
-			fmt.Printf("Starting to watch update events ##################\n")
+			t.Log("Starting to watch update events ##################\n")
 
 			// update nodes
 			for i := 0; i < tt.clientNum; i++ {
@@ -345,7 +344,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 						result, rvMap := distributor.ProcessEvents(updateNodeEvents)
 						assert.True(t, result)
 						assert.NotNil(t, rvMap)
-						//fmt.Printf("Successfully processed %d update node events. RV map returned: %v. ClientId %s\n", len(nodes), rvMap, clientId)
+						//t.Logf("Successfully processed %d update node events. RV map returned: %v. ClientId %s\n", len(nodes), rvMap, clientId)
 					}
 				}(tt.updateEventNum, nodesByClient[i], clientIds[i])
 			}
@@ -354,7 +353,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			allWaitGroup.Wait()
 			duration += time.Since(start)
 
-			fmt.Printf("Test %s succeed! Total duration %v\n", tt.name, duration)
+			t.Logf("Test %s succeed! Total duration %v\n", tt.name, duration)
 		})
 	}
 }
@@ -407,6 +406,14 @@ Processing 2000 AddNode events took 1.494359ms.
 Processing 20000 AddNode events took 13.193021ms.
 Processing 200000 AddNode events took 168.53739ms.
 Processing 2000000 AddNode events took 2.172339411s. 6.5% improvement
+
+. Added persistence
+Processing 20 AddNode events took 197.943µs.
+Processing 200 AddNode events took 1.571032ms.
+Processing 2000 AddNode events took 4.219236ms.
+Processing 20000 AddNode events took 28.11632ms.
+Processing 200000 AddNode events took 294.131531ms.
+Processing 2000000 AddNode events took 4.040301206s.
 */
 func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
 	distributor := setUp()
@@ -421,7 +428,7 @@ func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
 		distributor.ProcessEvents(eventsAdd1)
 		_, rvMap := distributor.ProcessEvents(eventsAdd2)
 		duration := time.Since(start)
-		fmt.Printf("Processing %d AddNode events took %v. Composite RVs %v\n", nodeCounts[i]*2, duration, rvMap)
+		t.Logf("Processing %d AddNode events took %v. Composite RVs %v\n", nodeCounts[i]*2, duration, rvMap)
 	}
 }
 
@@ -473,6 +480,14 @@ Processing 2000 AddNode events took 2.307846ms.
 Processing 20000 AddNode events took 8.299796ms.
 Processing 200000 AddNode events took 130.861087ms.
 Processing 2000000 AddNode events took 1.449320502s. - 6.5% improvement
+
+. Added persistence
+Processing 20 AddNode events took 430.548µs.
+Processing 200 AddNode events took 1.231249ms.
+Processing 2000 AddNode events took 2.68838ms.
+Processing 20000 AddNode events took 18.140626ms.
+Processing 200000 AddNode events took 175.578763ms.
+Processing 2000000 AddNode events took 2.460715575s.
 */
 func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 	distributor := setUp()
@@ -485,7 +500,7 @@ func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 		eventsAdd2 := generateAddNodeEvent(nodeCounts[i], location.NewLocation(location.Shanghai, location.ResourcePartition2))
 		start := time.Now()
 
-		wg := &sync.WaitGroup{}
+		wg := new(sync.WaitGroup)
 		wg.Add(2)
 
 		go func(done *sync.WaitGroup, eventsToProcess []*event.NodeEvent) {
@@ -500,6 +515,6 @@ func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 
 		wg.Wait()
 		duration := time.Since(start)
-		fmt.Printf("Processing %d AddNode events took %v.\n", nodeCounts[i]*2, duration)
+		t.Logf("Processing %d AddNode events took %v.\n", nodeCounts[i]*2, duration)
 	}
 }

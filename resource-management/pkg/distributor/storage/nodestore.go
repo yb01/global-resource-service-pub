@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"global-resource-service/resource-management/pkg/common-lib/hash"
+	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
@@ -244,26 +245,34 @@ func (ns *NodeStore) UpdateNode(nodeEvent *node.ManagedNodeEvent) {
 func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
 }
 
-func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent) (bool, types.ResourceVersionMap) {
+func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) (bool, types.ResourceVersionMap) {
+	persistHelper.SetWaitCount(len(nodeEvents))
+
 	for _, e := range nodeEvents {
 		if e == nil {
 			break
 		}
-		ns.processNodeEvent(e)
+		ns.processNodeEvent(e, persistHelper)
 	}
 
 	// persist disk
+	result := persistHelper.PersistStoreConfigs(ns.getNodeStoreStatus())
+	if !result {
+		// TODO
+	}
 
 	// TODO - make a copy of currentRVs in case modification happen unexpectedly
 	return true, ns.GetCurrentResourceVersions()
 }
 
-func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent) bool {
+func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) bool {
 	switch nodeEvent.GetEventType() {
 	case event.Added:
 		ns.CreateNode(nodeEvent)
+		persistHelper.PersistNode(nodeEvent.GetNodeEvent().Node)
 	case event.Modified:
 		ns.UpdateNode(nodeEvent)
+		persistHelper.PersistNode(nodeEvent.GetNodeEvent().Node)
 	default:
 		return false
 	}
@@ -364,5 +373,14 @@ func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *
 		// ?? - report error or not?
 		vNodeStore.mu.Unlock()
 		ns.addNodeToRing(hashValue, ringId, nodeEvent)
+	}
+}
+
+func (ns *NodeStore) getNodeStoreStatus() *store.NodeStoreStatus {
+	return &store.NodeStoreStatus{
+		RegionNum:              ns.regionNum,
+		PartitionMaxNum:        ns.partitionMaxNum,
+		VirtualNodeNumPerRP:    ns.virtualNodeNum / (ns.regionNum * ns.partitionMaxNum),
+		CurrentResourceVerions: ns.GetCurrentResourceVersions(),
 	}
 }

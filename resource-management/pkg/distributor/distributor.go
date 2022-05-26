@@ -7,6 +7,7 @@ import (
 	"k8s.io/klog/v2"
 	"sync"
 
+	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
@@ -24,6 +25,8 @@ type ResourceDistributor struct {
 	// clientId to virtual node store map
 	clientToStores map[string][]*storage.VirtualNodeStore
 	allocateLock   sync.Mutex
+
+	persistHelper store.StoreInterface
 }
 
 var _distributor *ResourceDistributor = nil
@@ -44,6 +47,10 @@ func GetResourceDistributor() *ResourceDistributor {
 		}
 	})
 	return _distributor
+}
+
+func (dis *ResourceDistributor) SetPersistHelper(persistTool store.StoreInterface) {
+	dis.persistHelper = persistTool
 }
 
 // TODO - get virtual node number, region num, partition num from external
@@ -120,6 +127,9 @@ func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requested
 		store.AssignToClient(clientId, eventQueue)
 	}
 	dis.clientToStores[clientId] = selectedStores
+
+	// persist virtual node assignment
+	dis.persistVirtualNodesAssignment(clientId, selectedStores)
 
 	return true, nil
 }
@@ -232,12 +242,35 @@ func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, 
 			if loc != nil {
 				eventsToProcess[i] = node.NewManagedNodeEvent(events[i], loc)
 			} else {
-				fmt.Printf("Invalid region %v and/or resource partition %v\n", events[i].Node.GeoInfo.Region, events[i].Node.GeoInfo.ResourcePartition)
+				klog.Errorf("Invalid region %v and/or resource partition %v\n", events[i].Node.GeoInfo.Region, events[i].Node.GeoInfo.ResourcePartition)
 			}
 		} else {
 			break
 		}
 	}
-	result, rvMap := dis.defaultNodeStore.ProcessNodeEvents(eventsToProcess)
+
+	persistHelper := storage.NewDistributorPersistHelper(dis.persistHelper)
+	result, rvMap := dis.defaultNodeStore.ProcessNodeEvents(eventsToProcess, persistHelper)
+	persistHelper.WaitForAllNodesSaved()
 	return result, rvMap
+}
+
+func (dis *ResourceDistributor) persistVirtualNodesAssignment(clientId string, assignedStores []*storage.VirtualNodeStore) bool {
+	vNodeConfigs := make([]*store.VirtualNodeConfig, len(assignedStores))
+	for i, s := range assignedStores {
+		vNodeToSave := &store.VirtualNodeConfig{
+			Location: s.GetLocation(),
+		}
+		vNodeToSave.Lowerbound, vNodeToSave.Upperbound = s.GetRange()
+		vNodeConfigs[i] = vNodeToSave
+	}
+	assignment := &store.VirtualNodeAssignment{
+		ClientId:     clientId,
+		VirtualNodes: vNodeConfigs,
+	}
+	result := storage.NewDistributorPersistHelper(dis.persistHelper).PersistVirtualNodesAssignment(assignment)
+	if !result {
+		// TODO
+	}
+	return result
 }
