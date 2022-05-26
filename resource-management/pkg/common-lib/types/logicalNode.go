@@ -124,7 +124,7 @@ func (n *LogicalNode) GetResourceVersionInt64() uint64 {
 
 func (n *LogicalNode) GetKey() string {
 	if n != nil {
-		return fmt.Sprintf("%s.%s.%s.%s", PreserveNode_KeyPrefix, n.Id, n.GeoInfo.Region, n.GeoInfo.ResourcePartition)
+		return fmt.Sprintf("%s.%s.%v.%v", PreserveNode_KeyPrefix, n.Id, n.GeoInfo.Region, n.GeoInfo.ResourcePartition)
 	}
 	return ""
 }
