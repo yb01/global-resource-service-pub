@@ -257,7 +257,7 @@ func (loc *Location) GetArcRangeFromLocation() (float64, float64) {
 }
 
 func (loc *Location) Equal(locToCompare Location) bool {
-	return loc.region == loc.region && loc.partition == locToCompare.partition
+	return loc.region == locToCompare.region && loc.partition == locToCompare.partition
 }
 
 func (loc *Location) String() string {
