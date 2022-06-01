@@ -1,6 +1,9 @@
 package location
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const RingRange = float64(360)
 
@@ -262,4 +265,14 @@ func (loc *Location) Equal(locToCompare Location) bool {
 
 func (loc *Location) String() string {
 	return fmt.Sprintf("[Region %s, ResoucePartition %s]", loc.region, loc.partition)
+}
+
+func (loc Location) MarshalText() (text []byte, err error) {
+	type l Location
+	return json.Marshal(l(loc))
+}
+
+func (loc *Location) UnmarshalText(text []byte) error {
+	type l Location
+	return json.Unmarshal(text, (*l)(loc))
 }
