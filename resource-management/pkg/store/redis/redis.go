@@ -189,7 +189,7 @@ func (gr *Goredis) GetNodes() []*types.LogicalNode {
 func (gr *Goredis) GetNodeStoreStatus() *store.NodeStoreStatus {
 	var nodeStoreStatus *store.NodeStoreStatus
 
-	value, err := gr.client.Get(gr.ctx, nodeStoreStatus.GetKey()).Result()
+	value, err := gr.client.Get(gr.ctx, nodeStoreStatus.GetKey()).Bytes()
 
 	if err != nil {
 		klog.Errorf("Error to get NodeStoreStatus from Redis Store:", err)
@@ -197,8 +197,7 @@ func (gr *Goredis) GetNodeStoreStatus() *store.NodeStoreStatus {
 	}
 
 	if err != redis.Nil {
-		bytes := []byte(value)
-		err = json.Unmarshal(bytes, &nodeStoreStatus)
+		err = json.Unmarshal(value, &nodeStoreStatus)
 
 		if err != nil {
 			klog.Errorf("Error from JSON Unmarshal for NodeStoreStatus:", err)
@@ -214,7 +213,7 @@ func (gr *Goredis) GetNodeStoreStatus() *store.NodeStoreStatus {
 func (gr *Goredis) GetVirtualNodesAssignments() *store.VirtualNodeAssignment {
 	var virtualNodeAssignment *store.VirtualNodeAssignment
 
-	value, err := gr.client.Get(gr.ctx, virtualNodeAssignment.GetKey()).Result()
+	value, err := gr.client.Get(gr.ctx, virtualNodeAssignment.GetKey()).Bytes()
 
 	if err != nil {
 		klog.Errorf("Error to get VirtualNodeAssignment from Redis Store:", err)
@@ -222,8 +221,7 @@ func (gr *Goredis) GetVirtualNodesAssignments() *store.VirtualNodeAssignment {
 	}
 
 	if err != redis.Nil {
-		bytes := []byte(value)
-		err = json.Unmarshal(bytes, &virtualNodeAssignment)
+		err = json.Unmarshal(value, &virtualNodeAssignment)
 
 		if err != nil {
 			klog.Errorf("Error from JSON Unmarshal for VirtualNodeAssignment:", err)
