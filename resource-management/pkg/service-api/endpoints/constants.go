@@ -20,4 +20,5 @@ const (
 	WatchChannelSize   = 100
 	WatchParameter     = "watch"
 	WatchParameterTrue = "true"
+	ResponseTrunkSize  = 500
 )

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"k8s.io/klog/v2"
+
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/distributor"
@@ -96,9 +98,19 @@ func TestHttpGet(t *testing.T) {
 
 	installer.ResourceHandler(recorder, req.WithContext(ctx))
 
-	actualNodes := make([]types.LogicalNode, 150)
+	actualNodes := make([]types.LogicalNode, 0)
+	decNodes := make([]types.LogicalNode, 0)
 
-	json.Unmarshal(recorder.Body.Bytes(), &actualNodes)
+	dec := json.NewDecoder(recorder.Body)
+
+	for dec.More() {
+		err := dec.Decode(&decNodes)
+		if err != nil {
+			klog.Errorf("decode nodes error: %v\n", err)
+		}
+
+		actualNodes = append(actualNodes, decNodes...)
+	}
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 	assert.Equal(t, len(expectedNodes), len(actualNodes))

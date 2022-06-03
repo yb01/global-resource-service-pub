@@ -120,15 +120,12 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 		resp.Header().Set("Content-Type", "text/plain")
 
 		nodes, _, err := i.dist.ListNodesForClient(clientId)
-
-		ret, err := json.Marshal(nodes)
-		klog.V(3).Infof("node ret: %s", ret)
 		if err != nil {
-			klog.V(3).Infof("error read get node list. error %v", err)
+			klog.V(3).Infof("error to get node list from distributor. error %v", err)
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		resp.Write(ret)
+		i.handleResponseTrunked(resp, nodes)
 	case http.MethodPut:
 		resp.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -226,4 +223,47 @@ func getResourceVersionsMap(req *http.Request) (types.ResourceVersionMap, error)
 	}
 
 	return wr.ResourceVersions, nil
+}
+
+func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode) {
+	var nodesLen = len(nodes)
+	if nodesLen <= ResponseTrunkSize {
+		ret, err := json.Marshal(nodes)
+		if err != nil {
+			klog.Errorf("error read get node list. error %v", err)
+			resp.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		resp.Write(ret)
+	} else {
+		flusher, ok := resp.(http.Flusher)
+		if !ok {
+			klog.Errorf("expected http.ResponseWriter to be an http.Flusher")
+		}
+
+		resp.Header().Set("Connection", "Keep-Alive")
+		resp.Header().Set("X-Content-Type-Options", "nosniff")
+		//TODO: handle network disconnect or similar cases.
+		var chunkedNodes []*types.LogicalNode
+		start := 0
+		for start < nodesLen {
+			end := start + ResponseTrunkSize
+			if end < nodesLen {
+				chunkedNodes = nodes[start:end]
+			} else {
+				chunkedNodes = nodes[start:nodesLen]
+			}
+
+			ret, err := json.Marshal(chunkedNodes)
+			if err != nil {
+				klog.Errorf("error read get node list. error %v", err)
+				resp.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			resp.Write(ret)
+			flusher.Flush()
+			start = end
+		}
+	}
+	return
 }
