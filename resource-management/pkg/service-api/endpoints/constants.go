@@ -2,6 +2,8 @@ package endpoints
 
 // URL path
 const (
+	ClientAdminitrationPath = "/clients"
+
 	//RegionlessResourcePath is the default api service url
 	RegionlessResourcePath = "/resource"
 	ListResourcePath       = RegionlessResourcePath + "/{clientid}"

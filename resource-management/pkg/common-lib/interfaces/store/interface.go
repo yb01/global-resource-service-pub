@@ -8,12 +8,21 @@ import (
 const (
 	Preserve_VirtualNodesAssignments_KeyPrefix = "VirtualNodesAssignments"
 	Preserve_NodeStoreStatus_KeyPrefix         = "NodeStoreStatus"
+	Preserve_Client_KeyPrefix = "Client"
 )
 
 type StoreInterface interface {
 	PersistNodes([]*types.LogicalNode) bool
 	PersistNodeStoreStatus(*NodeStoreStatus) bool
 	PersistVirtualNodesAssignments(*VirtualNodeAssignment) bool
+
+	// Interfaces for client object operations to store
+	PersistClient(string, *types.Client) error
+	GetClient(string) (*types.Client, error)
+	// Get all client object, during distributor restart, Admin UI etc
+	GetClients() ([]*types.Client, error)
+	// UpdateClient will be used with client Add/remove resources
+	UpdateClient(string, *types.Client) error
 }
 
 type NodeStoreStatus struct {

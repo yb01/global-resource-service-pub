@@ -7,6 +7,7 @@ import (
 	"global-resource-service/resource-management/pkg/aggregrator"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/service-api/endpoints"
+	"global-resource-service/resource-management/pkg/store/redis"
 
 	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
@@ -22,15 +23,21 @@ type Config struct {
 func Run(c *Config) error {
 	klog.V(3).Infof("Starting the API server...")
 
+	store := redis.NewRedisClient()
 	dist := distributor.GetResourceDistributor()
+	dist.SetPersistHelper(store)
 	installer := endpoints.NewInstaller(dist)
 
 	r := mux.NewRouter().StrictSlash(true)
 
+	// TODO: reuse k8s mux wrapper, pathrecorder.go for simplify this handler by each path
 	r.HandleFunc(endpoints.ListResourcePath, installer.ResourceHandler).Methods("GET")
 	r.HandleFunc(endpoints.WatchResourcePath, installer.ResourceHandler)
 	r.HandleFunc(endpoints.UpdateResourcePath, installer.ResourceHandler)
 	r.HandleFunc(endpoints.ReduceResourcePath, installer.ResourceHandler)
+
+	r.HandleFunc(endpoints.ClientAdminitrationPath, installer.ClientAdministrationHandler)
+	r.HandleFunc(endpoints.ClientAdminitrationPath + "/{clientId}", installer.ClientAdministrationHandler)
 
 	var addr string
 	var p string

@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"k8s.io/klog/v2"
 
@@ -18,7 +19,7 @@ type Goredis struct {
 }
 
 // Initialize Redis Client
-//
+// TODO: with configured parameters for the store
 func NewRedisClient() *Goredis {
 	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -45,7 +46,7 @@ func (gr *Goredis) setString(myKey, myValue string) bool {
 	err := gr.client.Set(gr.ctx, myKey, []byte(myValue), 0).Err()
 
 	if err != nil {
-		klog.Errorf("Error to persist String key and Value to Redis Store:", err)
+		klog.Errorf("Error to persist String key and Value to Redis Store. error %v", err)
 		return false
 	}
 
@@ -65,7 +66,7 @@ func (gr *Goredis) getString(myKey string) string {
 	value, err := gr.client.Get(gr.ctx, myKey).Bytes()
 
 	if err != nil {
-		klog.Errorf("Error to get String Key from Redis Store:", err)
+		klog.Errorf("Error to get String Key from Redis Store. error %v", err)
 		return ""
 	}
 
@@ -94,14 +95,14 @@ func (gr *Goredis) PersistNodes(logicalNodes []*types.LogicalNode) bool {
 		logicalNodeBytes, err := json.Marshal(logicalNode)
 
 		if err != nil {
-			klog.Errorf("Error from JSON Marshal for Logical Nodes:", err)
+			klog.Errorf("Error from JSON Marshal for Logical Nodes. error %v", err)
 			return false
 		}
 
 		err = gr.client.Set(gr.ctx, logicalNodeKey, logicalNodeBytes, 0).Err()
 
 		if err != nil {
-			klog.Errorf("Error to persist Logical Nodes to Redis Store:", err)
+			klog.Errorf("Error to persist Logical Nodes to Redis Store. error %v", err)
 			return false
 		}
 	}
@@ -115,14 +116,14 @@ func (gr *Goredis) PersistNodeStoreStatus(nodeStoreStatus *store.NodeStoreStatus
 	nodeStoreStatusBytes, err := json.Marshal(nodeStoreStatus)
 
 	if err != nil {
-		klog.Errorf("Error from JSON Marshal for Node Store Status:", err)
+		klog.Errorf("Error from JSON Marshal for Node Store Status. error %v", err)
 		return false
 	}
 
 	err = gr.client.Set(gr.ctx, nodeStoreStatus.GetKey(), nodeStoreStatusBytes, 0).Err()
 
 	if err != nil {
-		klog.Errorf("Error to persist Node Store Status to Redis Store:", err)
+		klog.Errorf("Error to persist Node Store Status to Redis Store. error %v", err)
 		return false
 	}
 
@@ -142,7 +143,7 @@ func (gr *Goredis) PersistVirtualNodesAssignments(virtualNodeAssignment *store.V
 	err = gr.client.Set(gr.ctx, virtualNodeAssignment.GetKey(), virtualNodeAssignmentBytes, 0).Err()
 
 	if err != nil {
-		klog.Errorf("Error to persist Virtual Node Assignment to Redis Store:", err)
+		klog.Errorf("Error to persist Virtual Node Assignment to Redis Store. error %v", err)
 		return false
 	}
 
@@ -164,7 +165,7 @@ func (gr *Goredis) GetNodes() []*types.LogicalNode {
 		value, err := gr.client.Get(gr.ctx, logicalNodeKey).Bytes()
 
 		if err != nil {
-			klog.Errorf("Error to get LogicalNode from Redis Store:", err)
+			klog.Errorf("Error to get LogicalNode from Redis Store. error %v", err)
 			return nil
 		}
 
@@ -172,7 +173,7 @@ func (gr *Goredis) GetNodes() []*types.LogicalNode {
 			err = json.Unmarshal(value, &logicalNode)
 
 			if err != nil {
-				klog.Errorf("Error from JSON Unmarshal for LogicalNode:", err)
+				klog.Errorf("Error from JSON Unmarshal for LogicalNode. error %v", err)
 				return nil
 			}
 
@@ -192,7 +193,7 @@ func (gr *Goredis) GetNodeStoreStatus() *store.NodeStoreStatus {
 	value, err := gr.client.Get(gr.ctx, nodeStoreStatus.GetKey()).Bytes()
 
 	if err != nil {
-		klog.Errorf("Error to get NodeStoreStatus from Redis Store:", err)
+		klog.Errorf("Error to get NodeStoreStatus from Redis Store. error %v", err)
 		return nil
 	}
 
@@ -200,7 +201,7 @@ func (gr *Goredis) GetNodeStoreStatus() *store.NodeStoreStatus {
 		err = json.Unmarshal(value, &nodeStoreStatus)
 
 		if err != nil {
-			klog.Errorf("Error from JSON Unmarshal for NodeStoreStatus:", err)
+			klog.Errorf("Error from JSON Unmarshal for NodeStoreStatus. error %v", err)
 			return nil
 		}
 	}
@@ -216,7 +217,7 @@ func (gr *Goredis) GetVirtualNodesAssignments() *store.VirtualNodeAssignment {
 	value, err := gr.client.Get(gr.ctx, virtualNodeAssignment.GetKey()).Bytes()
 
 	if err != nil {
-		klog.Errorf("Error to get VirtualNodeAssignment from Redis Store:", err)
+		klog.Errorf("Error to get VirtualNodeAssignment from Redis Store. error %v", err)
 		return nil
 	}
 
@@ -224,10 +225,61 @@ func (gr *Goredis) GetVirtualNodesAssignments() *store.VirtualNodeAssignment {
 		err = json.Unmarshal(value, &virtualNodeAssignment)
 
 		if err != nil {
-			klog.Errorf("Error from JSON Unmarshal for VirtualNodeAssignment:", err)
+			klog.Errorf("Error from JSON Unmarshal for VirtualNodeAssignment. error %v", err)
 			return nil
 		}
 	}
 
 	return virtualNodeAssignment
+}
+
+func (gr *Goredis) PersistClient(clientId string, client *types.Client) error {
+	ci, err := json.Marshal(client)
+
+	if err != nil {
+		klog.Errorf("Error marshalling client. error %v", err)
+		return err
+	}
+
+	err = gr.client.Set(gr.ctx, clientId, ci, 0).Err()
+
+	if err != nil {
+		klog.Errorf("Error persisting client to Redis Store. error %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (gr *Goredis) GetClient(clientId string) (*types.Client, error) {
+	ci := &types.Client{}
+
+	value, err := gr.client.Get(gr.ctx, clientId).Bytes()
+
+	if err != nil {
+		klog.Errorf("Error getting client from Redis Store. error %v", err)
+		return nil, err
+	}
+
+	if err == redis.Nil {
+		klog.Errorf("Client %s, is not found in store", clientId)
+		return nil, fmt.Errorf("client not found")
+	}
+
+	err = json.Unmarshal(value, ci)
+
+	if err != nil {
+		klog.Errorf("Error unmarshal client type. error %v", err)
+		return nil, err
+	}
+
+	return ci, nil
+}
+
+func (gr *Goredis) UpdateClient(clientId string, client *types.Client) error {
+	return fmt.Errorf("not implemented")
+}
+
+func (gr *Goredis) GetClients() ([]*types.Client, error) {
+	return nil, fmt.Errorf("not implemented")
 }

@@ -72,8 +72,10 @@ func TestHttpGet(t *testing.T) {
 	distributor.ProcessEvents(eventsAdd)
 
 	//register client
-	requestedHostNum := 500
-	clientId, _, err := distributor.RegisterClient(requestedHostNum)
+	client := types.Client{ClientId: "12345", Resource: types.ResourceRequest{TotalMachines: 500}, ClientInfo: types.ClientInfoType{}}
+
+	err := distributor.RegisterClient(&client)
+	clientId := client.ClientId
 
 	// client list nodes
 	expectedNodes, _, err := distributor.ListNodesForClient(clientId)

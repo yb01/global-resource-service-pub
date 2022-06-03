@@ -1,6 +1,7 @@
 package distributor
 
 import (
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"sync"
@@ -63,8 +64,11 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			clientIds := make([]string, tt.clientNum)
 			for i := 0; i < tt.clientNum; i++ {
 				start = time.Now()
-				clientId, result, err := distributor.RegisterClient(tt.hostPerClient)
+
+				client := types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: tt.hostPerClient}, ClientInfo: types.ClientInfoType{}}
+				err := distributor.RegisterClient(&client)
 				duration += time.Since(start)
+				clientId := client.ClientId
 
 				assert.True(t, result, "Expecting register client successfully")
 				assert.NotNil(t, clientId, "Expecting not nil client id")
@@ -243,11 +247,12 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			start = time.Now()
 			for i := 0; i < tt.clientNum; i++ {
 				go func(done *sync.WaitGroup, hostPerClient int, clientIds []string, i int) {
-					clientId, result, err := distributor.RegisterClient(hostPerClient)
+					client := types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: hostPerClient}, ClientInfo: types.ClientInfoType{}}
+					err := distributor.RegisterClient(&client)
+					clientId := client.ClientId
 					clientIds[i] = clientId
 					done.Done()
 
-					assert.True(t, result, "Expecting register client successfully")
 					assert.NotNil(t, clientId, "Expecting not nil client id")
 					assert.False(t, clientId == "", "Expecting non empty client id")
 					assert.Nil(t, err, "Expecting nil error")

@@ -242,16 +242,18 @@ func TestRegisterClient_ErrorCases(t *testing.T) {
 	assert.NotNil(t, rvMap)
 	assert.Equal(t, 10, distributor.defaultNodeStore.GetTotalHostNum())
 
+	client := types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: 100}, ClientInfo: types.ClientInfoType{}}
 	// not enough hosts
-	clientId, result, err := distributor.RegisterClient(100)
-	assert.False(t, result, "Expecting request fail due to not enough hosts")
+	err := distributor.RegisterClient(&client)
+	clientId := client.ClientId
 	assert.NotNil(t, clientId, "Expecting not nil client id")
 	assert.False(t, clientId == "", "Expecting non empty client id")
 	assert.Equal(t, types.Error_HostRequestExceedLimit, err)
 
 	// less than minimal request host number
-	clientId, result, err = distributor.RegisterClient(MinimalRequestHostNum - 1)
-	assert.False(t, result, "Expecting request fail due to less than minimal host request")
+	client = types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: MinimalRequestHostNum - 1}, ClientInfo: types.ClientInfoType{}}
+	err = distributor.RegisterClient(&client)
+	clientId = client.ClientId
 	assert.NotNil(t, clientId, "Expecting not nil client id")
 	assert.False(t, clientId == "", "Expecting non empty client id")
 	assert.Equal(t, types.Error_HostRequestLessThanMiniaml, err)
@@ -269,10 +271,11 @@ func TestRegisterClient_WithinLimit(t *testing.T) {
 	requestedHostNum := 500
 	for i := 0; i < 10; i++ {
 		start := time.Now()
-		clientId, result, err := distributor.RegisterClient(requestedHostNum)
+		client := types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: requestedHostNum}, ClientInfo: types.ClientInfoType{}}
+		err := distributor.RegisterClient(&client)
 		duration := time.Since(start)
 
-		assert.True(t, result, "Expecting register client successfully")
+		clientId := client.ClientId
 		assert.NotNil(t, clientId, "Expecting not nil client id")
 		assert.False(t, clientId == "", "Expecting non empty client id")
 		assert.Nil(t, err, "Expecting nil error")
@@ -319,8 +322,10 @@ func TestRegistrationWorkflow(t *testing.T) {
 
 	// register client
 	requestedHostNum := 500
-	clientId, result, err := distributor.RegisterClient(requestedHostNum)
-	assert.True(t, result, "Expecting register client successfully")
+
+	client := types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: requestedHostNum}, ClientInfo: types.ClientInfoType{}}
+	err := distributor.RegisterClient(&client)
+	clientId := client.ClientId
 	assert.NotNil(t, clientId, "Expecting not nil client id")
 	assert.False(t, clientId == "", "Expecting non empty client id")
 	assert.Nil(t, err, "Expecting nil error")

@@ -3,7 +3,6 @@ package distributor
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 	"sync"
 
@@ -58,14 +57,23 @@ func createNodeStore() *storage.NodeStore {
 	return storage.NewNodeStore(virutalStoreNumPerResourcePartition, location.GetRegionNum(), location.GetRPNum())
 }
 
-func (dis *ResourceDistributor) RegisterClient(requestedHostNum int) (string, bool, error) {
-	clientId := uuid.New().String()
-	result, err := dis.allocateNodesToClient(clientId, requestedHostNum)
+// TODO: post 630, allocate resources per request for different type of hardware and regions
+func (dis *ResourceDistributor) RegisterClient(client *types.Client) error {
+	clientId := client.ClientId
+	_, err := dis.allocateNodesToClient(clientId, client.Resource.TotalMachines)
 	if err != nil {
-		klog.Errorf("Error register client. Error %v\n", err)
+		klog.Errorf("Error allocate resource for client. Error %v\n", err)
+		return err
 	}
+
+	err = dis.persistHelper.PersistClient(clientId, client)
+	if err != nil {
+		klog.Errorf("Error persistent client to store. Error %v\n", err)
+		return err
+	}
+
 	klog.Errorf("Registered client id: %s\n", clientId)
-	return clientId, result, err
+	return nil
 }
 
 func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requestedHostNum int) (bool, error) {

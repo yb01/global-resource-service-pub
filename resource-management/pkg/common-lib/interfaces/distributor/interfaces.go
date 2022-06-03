@@ -6,7 +6,8 @@ import (
 )
 
 type Interface interface {
-	RegisterClient(requestedHostNum int) (string, bool, error)
+	RegisterClient(*types.Client) error
+
 	ListNodesForClient(clientId string) ([]*types.LogicalNode, types.ResourceVersionMap, error)
 	Watch(clientId string, rvs types.ResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error
 	ProcessEvents(events []*event.NodeEvent) (bool, types.ResourceVersionMap)

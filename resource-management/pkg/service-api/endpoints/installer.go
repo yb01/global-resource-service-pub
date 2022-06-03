@@ -2,11 +2,14 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/google/uuid"
 	"io/ioutil"
 	"k8s.io/klog/v2"
 	"net/http"
 
 	di "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
+	store "global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	apiTypes "global-resource-service/resource-management/pkg/service-api/types"
@@ -18,6 +21,86 @@ type Installer struct {
 
 func NewInstaller(d di.Interface) *Installer {
 	return &Installer{d}
+}
+
+func (i *Installer) ClientAdministrationHandler(resp http.ResponseWriter, req *http.Request) {
+	klog.V(3).Infof("handle /client. URL path: %s", req.URL.Path)
+
+	switch req.Method {
+	case http.MethodPost:
+		i.handleClientRegistration(resp, req)
+		return
+	case http.MethodDelete:
+		i.handleClientUnRegistration(resp, req)
+		return
+	default:
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+}
+
+// TODO: error handling function
+func (i *Installer) handleClientRegistration(resp http.ResponseWriter, req *http.Request) {
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		klog.V(3).Infof("error read request. error %v", err)
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	clientReq := apiTypes.ClientRegistrationRequest{}
+
+	err = json.Unmarshal(body, &clientReq)
+	if err != nil {
+		klog.V(3).Infof("error unmarshal request body. error %v", err)
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	requestedMachines := clientReq.InitialRequestedResource.TotalMachines
+	if requestedMachines > types.MaxTotalMachinesPerRequest || requestedMachines < types.MinTotalMachinesPerRequest {
+		klog.V(3).Infof("Invalid request of resources. requested total machines: %v", requestedMachines)
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: need to design to avoid client to register itself
+	c_id := fmt.Sprintf("%s-%s", store.Preserve_Client_KeyPrefix, uuid.New().String())
+	client := types.Client{ClientId: c_id, Resource: clientReq.InitialRequestedResource, ClientInfo: clientReq.ClientInfo}
+
+	err = i.dist.RegisterClient(&client)
+
+	if err != nil {
+		klog.V(3).Infof("error register client. error %v", err)
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// for 630, request of initial resource request with client registration is either denied or granted in full
+	ret := apiTypes.ClientRegistrationResponse{ClientId: client.ClientId, GrantedResource: client.Resource}
+
+	b, err := json.Marshal(ret)
+	if err != nil {
+		klog.V(3).Infof("error marshal client response. error %v", err)
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_, err = resp.Write(b)
+	if err != nil {
+		klog.V(3).Infof("error write response. error %v", err)
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	return
+}
+
+func (i *Installer) handleClientUnRegistration(resp http.ResponseWriter, req *http.Request) {
+	klog.V(3).Infof("not implemented")
+	resp.WriteHeader(http.StatusNotImplemented)
+	return
 }
 
 func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request) {
