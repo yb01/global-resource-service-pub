@@ -3,10 +3,11 @@ package aggregrator
 import (
 	"encoding/json"
 	"io/ioutil"
-	"k8s.io/klog/v2"
 	"net/http"
 	"strings"
 	"time"
+
+	"k8s.io/klog/v2"
 
 	distributor "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	"global-resource-service/resource-management/pkg/common-lib/types"
@@ -121,9 +122,9 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength int, c
 	var path string
 
 	if crv == nil {
-		path = "c.baseURL/resources/initPull"
+		path = "c.baseURL/resources/initpull"
 	} else {
-		path = "c.baseURL/resources/subsequentPull"
+		path = "c.baseURL/resources/subsequentpull"
 	}
 
 	bytes, _ := json.Marshal(PullDataFromRRM{BatchLength: batchLength, CRV: crv.Copy()})
@@ -138,8 +139,8 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength int, c
 	if err != nil {
 		klog.Errorf(err.Error())
 	}
-
 	defer resp.Body.Close()
+
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		klog.Errorf(err.Error())
