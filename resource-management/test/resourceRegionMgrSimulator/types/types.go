@@ -8,16 +8,16 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
 
-type RegionNodeEvents []*event.NodeEvent
+type RegionNodeEvents [][]*event.NodeEvent
 
 type PostCRVstatus bool
 
 // RRM: Resource Region Manager
 //
 type ResponseFromRRM struct {
-	RegionNodeEvents []*event.NodeEvent
-	RvMap               types.ResourceVersionMap
-	Length              int
+	RegionNodeEvents [][]*event.NodeEvent
+	RvMap            types.ResourceVersionMap
+	Length           uint64
 }
 
 // The type is for pulling data with batch from RRM - Resource Region Manager

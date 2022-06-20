@@ -69,22 +69,23 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 	//
 	if r.URL.Path == InitPullPath || r.URL.Path == SubsequentPullPath {
 		var nodeEvents simulatorTypes.RegionNodeEvents
+		var count uint64
 
 		if r.URL.Path == InitPullPath {
-			nodeEvents = data.GetRegionNodeAddedEvents(aggregatorClientReq.BatchLength)
+			nodeEvents, count = data.GetRegionNodeAddedEvents(aggregatorClientReq.BatchLength)
 		} else if r.URL.Path == SubsequentPullPath {
-			nodeEvents = data.GetRegionNodeModifiedEventsCRV(aggregatorClientReq.CRV)
+			nodeEvents, count = data.GetRegionNodeModifiedEventsCRV(aggregatorClientReq.CRV)
 		}
 
-		if len(nodeEvents) == 0 {
+		if count == 0 {
 			klog.Info("Pulling Region Node Events with batch is in the end")
 		} else {
-			klog.Infof("Pulling Region Node Event with final batch size (%v)", len(nodeEvents))
+			klog.Infof("Pulling Region Node Event with final batch size (%v)", count)
 
 			response := &simulatorTypes.ResponseFromRRM{
 				RegionNodeEvents: nodeEvents,
 				RvMap:            aggregatorClientReq.CRV,
-				Length:           len(nodeEvents),
+				Length:           uint64(count),
 			}
 
 			// Serialize region node events result to JSON
