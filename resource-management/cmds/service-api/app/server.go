@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"global-resource-service/resource-management/pkg/aggregrator"
@@ -37,7 +38,7 @@ func Run(c *Config) error {
 	r.HandleFunc(endpoints.ReduceResourcePath, installer.ResourceHandler)
 
 	r.HandleFunc(endpoints.ClientAdminitrationPath, installer.ClientAdministrationHandler)
-	r.HandleFunc(endpoints.ClientAdminitrationPath + "/{clientId}", installer.ClientAdministrationHandler)
+	r.HandleFunc(endpoints.ClientAdminitrationPath+"/{clientId}", installer.ClientAdministrationHandler)
 
 	var addr string
 	var p string
@@ -57,7 +58,16 @@ func Run(c *Config) error {
 		ReadTimeout:  2 * time.Second,
 	}
 
-	err := server.ListenAndServe()
+	// start the service and aggregator in go routines
+	var wg sync.WaitGroup
+	var err error
+
+	klog.V(3).Infof("Starting the resource management service ...")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = server.ListenAndServe()
+	}()
 
 	if err != nil {
 		return err
@@ -65,12 +75,17 @@ func Run(c *Config) error {
 
 	// start the aggregator instance
 	klog.V(3).Infof("Starting the Aggregator ...")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		aggregator := aggregrator.NewAggregator(c.ResourceUrls, dist)
+		err = aggregator.Run()
+	}()
 
-	aggregator := aggregrator.NewAggregator(c.ResourceUrls, dist)
-	err = aggregator.Run()
 	if err != nil {
 		return err
 	}
 
+	wg.Wait()
 	return nil
 }
