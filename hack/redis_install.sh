@@ -5,9 +5,9 @@
 #
 #    Running on Ubuntu 20.04: ./hack/redis_install.sh
 #                              Redis 7.0.0 is installed as default
-#    Running on Ubuntu 18.04: ./bin/bash ./hack/redis_install.sh
+#    Running on Ubuntu 18.04:  /bin/bash ./hack/redis_install.sh
 #                              Redis 7.0.0 is installed as default
-#    Running on Ubuntu 16.04: ./bin/bash ./hack/redis_install.sh
+#    Running on Ubuntu 16.04:  /bin/bash ./hack/redis_install.sh
 #                              Redis 7.0.0 is installed as default
 #
 #    Running on MacOS:  /bin/bash ./hack/redis_install.sh

@@ -74,7 +74,7 @@ func MakeDataUpdate() {
 // Return region node added events in BATCH LENGTH from all RPs
 // TO DO: paginate support
 //
-func GetRegionNodeAddedEvents(batchLength int) (simulatorTypes.RegionNodeEvents, uint64) {
+func GetRegionNodeAddedEvents(batchLength uint64) (simulatorTypes.RegionNodeEvents, uint64) {
 	klog.Infof("Total (%v) Added events are to be pulled", RpNum*NodesPerRP)
 	return RegionNodeEventsList, uint64(RpNum * NodesPerRP)
 

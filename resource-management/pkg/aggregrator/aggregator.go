@@ -2,6 +2,7 @@ package aggregrator
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -30,20 +31,22 @@ type ClientOfRRM struct {
 // RRM: Resource Region Manager
 //
 type ResponseFromRRM struct {
-	MinRecordNodeEvents []*event.NodeEvent
-	RvMap               types.ResourceVersionMap
-	Length              int
+	RegionNodeEvents [][]*event.NodeEvent
+	RvMap            types.ResourceVersionMap
+	Length           uint64
 }
 
 // RRM: Resource Region Manager
 //
 type PullDataFromRRM struct {
-	BatchLength int
+	BatchLength uint64
+	DefaultCRV  uint64
 	CRV         types.ResourceVersionMap
 }
 
 const (
-	DefaultBatchLength = 1000
+	DefaultBatchLength = 20000
+	httpPrefix         = "http://"
 )
 
 // Initialize aggregator
@@ -69,7 +72,9 @@ func (a *Aggregator) Run() (err error) {
 	for i := 0; i < numberOfURLs; i++ {
 		go func(i int) {
 			var crv types.ResourceVersionMap
-			var minRecordNodeEvents []*event.NodeEvent
+			var regionNodeEvents [][]*event.NodeEvent
+			var length uint64
+			var eventProcess bool
 
 			// Connect to resource region manager
 			c := a.createClient(a.urls[i])
@@ -81,16 +86,23 @@ func (a *Aggregator) Run() (err error) {
 				// when composite RV is nil, the method initPull is called;
 				// otherwise the method subsequentPull is called.
 				// To simplify the codes, we use one method initPullOrSubsequentPull instead
-				minRecordNodeEvents, _ = a.initPullOrSubsequentPull(c, DefaultBatchLength, crv)
+				regionNodeEvents, length = a.initPullOrSubsequentPull(c, DefaultBatchLength, crv)
+				klog.Infof("Total (%v) region node events are pulled successfully in (%v)", len(regionNodeEvents), length)
 
-				if minRecordNodeEvents != nil {
+				// Convert 2D array to 1D array
+				var minRecordNodeEvents []*event.NodeEvent
+				for j := 0; j < len(regionNodeEvents); j++ {
+					minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
+				}
+				klog.Infof("Total (%v) mini node events are converted successfully in (%v)", len(minRecordNodeEvents), length)
+
+				if len(minRecordNodeEvents) != 0 {
 					// Call ProcessEvents() and get the CRV from distributor as default success
 					// TODO:
-					//    1. wrap up the logical Node record per Distributor needs ( the interfaces need to be updated as well )
-					//    2. call the ProcessEvents Per RP to unload some cost from the Distributor
-					eventProcess, crv := a.EventProcessor.ProcessEvents(minRecordNodeEvents)
+					//    1. Call the ProcessEvents Per RP to unload some cost from the Distributor
+					//       The performance tested in development Mac is not good
+					eventProcess, crv = a.EventProcessor.ProcessEvents(minRecordNodeEvents)
 
-					// Call resource region manager, POST CRV to release old node events when ProcessEvents is successful
 					if eventProcess {
 						a.postCRV(c, crv)
 					}
@@ -109,7 +121,7 @@ func (a *Aggregator) createClient(url string) *ClientOfRRM {
 	return &ClientOfRRM{
 		BaseURL: url,
 		HTTPClient: &http.Client{
-			Timeout: time.Minute,
+			Timeout: time.Minute * 3600,
 		},
 	}
 }
@@ -118,14 +130,19 @@ func (a *Aggregator) createClient(url string) *ClientOfRRM {
 // or
 // Call the resource region manager's SubsequentPull method {url}/resources/subsequentpull when crv is not nil
 //
-func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength int, crv types.ResourceVersionMap) ([]*event.NodeEvent, int) {
+func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64, crv types.ResourceVersionMap) ([][]*event.NodeEvent, uint64) {
 	var path string
 
-	if crv == nil {
-		path = "c.baseURL/resources/initpull"
+	if len(crv) == 0 {
+		path = httpPrefix + c.BaseURL + "/resources/initpull"
 	} else {
-		path = "c.baseURL/resources/subsequentpull"
+		path = httpPrefix + c.BaseURL + "/resources/subsequentpull"
 	}
+
+	fmt.Println(crv)
+
+	klog.Info("Sleeping 15 seconds")
+	time.Sleep(time.Second * 15)
 
 	bytes, _ := json.Marshal(PullDataFromRRM{BatchLength: batchLength, CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodGet, path, strings.NewReader((string(bytes))))
@@ -138,6 +155,9 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength int, c
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		klog.Errorf(err.Error())
+		// Fix the bug - "Aggregator should not exit if the resource region manager is not available"
+		var blankMinRecordNodeEvents [][]*event.NodeEvent
+		return blankMinRecordNodeEvents, 0
 	}
 	defer resp.Body.Close()
 
@@ -152,15 +172,15 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength int, c
 		klog.Errorf("Error from JSON Unmarshal:", err)
 	}
 
-	return ResponseObject.MinRecordNodeEvents, ResponseObject.Length
+	return ResponseObject.RegionNodeEvents, ResponseObject.Length
 }
 
 // Call resource region manager's POST method {url}/resources/crv to update the CRV
 // error indicate failed POST, CRV means Composite Resource Version
 //
 func (a *Aggregator) postCRV(c *ClientOfRRM, crv types.ResourceVersionMap) error {
-	path := "c.baseURL/resources/crv"
-	bytes, _ := json.Marshal(crv.Copy())
+	path := httpPrefix + c.BaseURL + "/resources/crv"
+	bytes, _ := json.Marshal(PullDataFromRRM{CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodPost, path, strings.NewReader((string(bytes))))
 
 	if err != nil {

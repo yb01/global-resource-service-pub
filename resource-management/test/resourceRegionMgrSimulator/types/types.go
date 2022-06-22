@@ -23,7 +23,7 @@ type ResponseFromRRM struct {
 // The type is for pulling data with batch from RRM - Resource Region Manager
 //
 type PullDataFromRRM struct {
-	BatchLength int
+	BatchLength uint64
 	DefaultCRV  uint64
 	CRV         types.ResourceVersionMap
 }

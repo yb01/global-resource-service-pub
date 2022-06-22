@@ -47,13 +47,13 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 
 	// Check CRV data received from aggregator client side
 	if r.URL.Path == InitPullPath {
-		if aggregatorClientReq.CRV != nil {
-			klog.Error("Error: CRV should nil, but right now it is not nil")
+		if len(aggregatorClientReq.CRV) != 0 {
+			klog.Error("Error: CRV should blank, but right now it is not blank")
 			return
 		}
 	} else if r.URL.Path == SubsequentPullPath || r.URL.Path == PostCRVPath {
-		if aggregatorClientReq.CRV == nil {
-			klog.Error("Error: CRVs should not nil, but right now it is nil")
+		if len(aggregatorClientReq.CRV) == 0 {
+			klog.Error("Error: CRVs should not blank, but right now it is blank")
 			return
 		}
 	} else {
@@ -77,10 +77,10 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 			nodeEvents, count = data.GetRegionNodeModifiedEventsCRV(aggregatorClientReq.CRV)
 		}
 
-		if count == 0 {
+		if len(nodeEvents) == 0 {
 			klog.Info("Pulling Region Node Events with batch is in the end")
 		} else {
-			klog.Infof("Pulling Region Node Event with final batch size (%v)", count)
+			klog.Infof("Pulling Region Node Event with final batch size (%v) for (%v) regions", count, len(nodeEvents))
 
 			response := &simulatorTypes.ResponseFromRRM{
 				RegionNodeEvents: nodeEvents,
@@ -93,6 +93,12 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 
 			if err != nil {
 				klog.Errorf("Error - Unable to marshal json : ", err)
+			}
+
+			if r.URL.Path == InitPullPath {
+				klog.Info("Handle GET all region node added events via initPull successfully")
+			} else {
+				klog.Info("Handle GET all region node modified events via SubsequentPull succesfully")
 			}
 		}
 
@@ -107,5 +113,7 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 		if err != nil {
 			klog.Errorf("Error - Unable to marshal json : ", err)
 		}
+
+		klog.Info("Handle POST CRV to discard all old region node modified events successfully")
 	}
 }
