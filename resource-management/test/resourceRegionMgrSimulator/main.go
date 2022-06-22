@@ -20,8 +20,8 @@ func main() {
 
 	flag.IntVar(&c.RegionId, "region_id", 9, "Region Id, if not set, default to 9")
 	flag.IntVar(&c.RpNum, "rp_num", 10, "The number of RPs per region, if not set, default to 10")
-	flag.IntVar(&c.NodesPerRP, "nodes_per_rp", 3000, "The number of RPs per region, if not set, default to 10")
-	flag.StringVar(&c.MasterPort, "master_port", "8080", "Service port, if not set, default to 8080")
+	flag.IntVar(&c.NodesPerRP, "nodes_per_rp", 25000, "The number of RPs per region, if not set, default to 25000")
+	flag.StringVar(&c.MasterPort, "master_port", "9119", "Service port, if not set, default to 9119")
 
 	if !flag.Parsed() {
 		klog.InitFlags(nil)
