@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -33,29 +34,20 @@ func Run(c *Config) error {
 
 	// TODO: reuse k8s mux wrapper, pathrecorder.go for simplify this handler by each path
 	r.HandleFunc(endpoints.ListResourcePath, installer.ResourceHandler).Methods("GET")
-	r.HandleFunc(endpoints.WatchResourcePath, installer.ResourceHandler)
+	r.HandleFunc(endpoints.WatchResourcePath, installer.ResourceHandler).Methods("GET")
 	r.HandleFunc(endpoints.UpdateResourcePath, installer.ResourceHandler)
 	r.HandleFunc(endpoints.ReduceResourcePath, installer.ResourceHandler)
 
 	r.HandleFunc(endpoints.ClientAdminitrationPath, installer.ClientAdministrationHandler)
 	r.HandleFunc(endpoints.ClientAdminitrationPath+"/{clientId}", installer.ClientAdministrationHandler)
 
-	var addr string
-	var p string
-
-	if c.MasterIp == "" {
-		addr = "localhost"
-	}
-
-	if c.MasterPort == "" {
-		p = endpoints.InsecureServiceAPIPort
-	}
-
+	address := fmt.Sprintf("%s:%s", c.MasterIp, c.MasterPort)
+	klog.Infof("Serving at %s", address)
 	server := &http.Server{
 		Handler:      r,
-		Addr:         addr + p,
-		WriteTimeout: 2 * time.Second,
-		ReadTimeout:  2 * time.Second,
+		Addr:         address,
+		WriteTimeout: 120 * time.Second,
+		ReadTimeout:  120 * time.Second,
 	}
 
 	// start the service and aggregator in go routines

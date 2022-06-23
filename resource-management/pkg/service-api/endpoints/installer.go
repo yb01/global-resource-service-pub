@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"k8s.io/klog/v2"
 	"net/http"
+	"strings"
 
 	di "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	store "global-resource-service/resource-management/pkg/common-lib/interfaces/store"
@@ -42,6 +43,7 @@ func (i *Installer) ClientAdministrationHandler(resp http.ResponseWriter, req *h
 
 // TODO: error handling function
 func (i *Installer) handleClientRegistration(resp http.ResponseWriter, req *http.Request) {
+	klog.Infof("handle client registration")
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		klog.V(3).Infof("error read request. error %v", err)
@@ -108,8 +110,8 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 
 	switch req.Method {
 	case http.MethodGet:
-		ctx := req.Context()
-		clientId := ctx.Value("clientid").(string)
+		// urlpath is fixed: "/resource/clientid"
+		clientId := strings.Split(req.URL.Path, "/")[2]
 
 		if req.URL.Query().Get(WatchParameter) == WatchParameterTrue {
 			i.serverWatch(resp, req, clientId)

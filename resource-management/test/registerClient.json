@@ -1,0 +1,9 @@
+{
+  "client_info": {
+    "client_name": "testclient",
+    "client_region": "beijing"
+  },
+  "init_resource_request": {
+    "total_machines": 2000
+  }
+}

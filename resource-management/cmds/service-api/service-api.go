@@ -47,7 +47,7 @@ func main() {
 		klog.Errorf("error: %v\n", err)
 	}
 
-	klog.Infof("Exiting reesource management service")
+	klog.Infof("Exiting resource management service")
 }
 
 // function to print the usage info for the resource management api server

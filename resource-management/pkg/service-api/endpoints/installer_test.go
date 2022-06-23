@@ -1,8 +1,8 @@
 package endpoints
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -86,7 +86,7 @@ func TestHttpGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resourcePath := RegionlessResourcePath + "/" + clientId
+	resourcePath := fmt.Sprintf("%s/%s", RegionlessResourcePath, clientId)
 	req, err := http.NewRequest(http.MethodGet, resourcePath, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -94,9 +94,7 @@ func TestHttpGet(t *testing.T) {
 
 	recorder := httptest.NewRecorder()
 
-	ctx := context.WithValue(req.Context(), "clientid", clientId)
-
-	installer.ResourceHandler(recorder, req.WithContext(ctx))
+	installer.ResourceHandler(recorder, req)
 
 	actualNodes := make([]types.LogicalNode, 0)
 	decNodes := make([]types.LogicalNode, 0)
