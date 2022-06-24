@@ -4,6 +4,6 @@
     "client_region": "beijing"
   },
   "init_resource_request": {
-    "total_machines": 2000
+    "total_machines": 10000
   }
 }

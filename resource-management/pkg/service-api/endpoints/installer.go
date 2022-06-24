@@ -110,13 +110,8 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 
 	switch req.Method {
 	case http.MethodGet:
-		// urlpath is fixed: "/resource/clientid"
-		clientId := strings.Split(req.URL.Path, "/")[2]
-
-		if req.URL.Query().Get(WatchParameter) == WatchParameterTrue {
-			i.serverWatch(resp, req, clientId)
-			return
-		}
+		clientId := getClinetId(req)
+		klog.Infof("Handle resource for client: %v", clientId)
 
 		resp.WriteHeader(http.StatusOK)
 		resp.Header().Set("Content-Type", "text/plain")
@@ -128,6 +123,20 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 			return
 		}
 		i.handleResponseTrunked(resp, nodes, crv)
+		return
+	// hack: currently crv is used for watch watermark, this is up to 200 RPs which cannot fit as parameters or headers
+	// unfortunately GET will return 405 with request body.
+	// It's unlikely we can change to other solutions for now. so use POST to test verify the watch logic and flows for now.
+	// TODO: switch to logical record or other means to set the water mark as query parameter
+	case http.MethodPost:
+		clientId := getClinetId(req)
+		klog.Infof("Handle resource for client: %v", clientId)
+
+		if req.URL.Query().Get(WatchParameter) == WatchParameterTrue {
+			i.serverWatch(resp, req, clientId)
+			return
+		}
+		return
 	case http.MethodPut:
 		resp.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -156,15 +165,18 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 	// read request body and get the crv
 	crvMap, err := getResourceVersionsMap(req)
 	if err != nil {
-		klog.Errorf("uUable to get the resource versions. Error %v", err)
+		klog.Errorf("unable to get the resource versions. Error %v", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	klog.V(9).Infof("Received CRV: %v", crvMap)
+
 	// start the watcher
+	klog.V(3).Infof("Start watching distributor for client: %v", clientId)
 	err = i.dist.Watch(clientId, crvMap, watchCh, stopCh)
 	if err != nil {
-		klog.Errorf("uUable to start the watch at store. Error %v", err)
+		klog.Errorf("unable to start the watch at store. Error %v", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -183,6 +195,7 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 	resp.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
+	klog.V(3).Infof("Start processing watch event for client: %v", clientId)
 	for {
 		select {
 		case <-done:
@@ -190,8 +203,11 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 		case record, ok := <-watchCh:
 			if !ok {
 				// End of results.
+				klog.V(3).Infof("End of results")
 				return
 			}
+
+			klog.V(3).Infof("Getting event from distributor: %v", record)
 
 			if err := json.NewEncoder(resp).Encode(*record.Node); err != nil {
 				klog.V(3).Infof("encoding record failed. error %v", err)
@@ -210,17 +226,29 @@ func stopWatch(stopCh chan struct{}) {
 	stopCh <- struct{}{}
 }
 
+// get clientId from url path
+func getClinetId(req *http.Request) string {
+	// urlpath is fixed: "/resource/clientid"
+	clientId := strings.Split(req.URL.Path, "/")[2]
+	// watch url path "/resource/clientid?watch=true"
+	clientId = strings.Split(clientId, "?")[0]
+
+	return clientId
+}
+
 func getResourceVersionsMap(req *http.Request) (types.ResourceVersionMap, error) {
 	body, err := ioutil.ReadAll(req.Body)
 
 	if err != nil {
+		klog.Errorf("Failed read request body, error %v", err)
 		return nil, err
 	}
 
 	wr := apiTypes.WatchRequest{}
 
-	err = json.Unmarshal(body, wr)
+	err = json.Unmarshal(body, &wr)
 	if err != nil {
+		klog.Errorf("Failed unmarshal request body, error %v", err)
 		return nil, err
 	}
 

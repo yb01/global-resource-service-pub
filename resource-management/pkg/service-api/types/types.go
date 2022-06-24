@@ -23,6 +23,9 @@ type ClientRegistrationResponse struct {
 	GrantedResource types.ResourceRequest `json:"granted_resource,omitempty"`
 }
 
+// ListNodeResponse is the response body for listing nodes from a client
+// NodeList is the list of LogicalNodes returned from Distributor allocated for this client
+// ResourceVersions are the list of RVs from each RP
 type ListNodeResponse struct {
 	NodeList         []*types.LogicalNode     `json:"node_list",omitempty`
 	ResourceVersions types.ResourceVersionMap `json:"resource_version_map,omitempty"`

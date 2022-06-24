@@ -1,0 +1,7 @@
+{
+ "resource_versions": {
+    "{\"Region\":8,\"Partition\":0}": 5000,
+    "{\"Region\":8,\"Partition\":1}": 5000,
+    "{\"Region\":8,\"Partition\":2}": 5000
+  }
+}
