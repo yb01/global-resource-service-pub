@@ -52,9 +52,8 @@ func Run(c *RegionConfig) error {
 	s := &http.Server{
 		Addr:         bindAddress,
 		Handler:      sm,
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  3600 * time.Second,
-		WriteTimeout: 3600 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
 	}
 
 	go func() {

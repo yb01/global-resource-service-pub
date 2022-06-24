@@ -80,7 +80,7 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 		if len(nodeEvents) == 0 {
 			klog.Info("Pulling Region Node Events with batch is in the end")
 		} else {
-			klog.Infof("Pulling Region Node Event with final batch size (%v) for (%v) regions", count, len(nodeEvents))
+			klog.Infof("Pulling Region Node Event with final batch size (%v) for (%v) RPs", count, len(nodeEvents))
 
 			response := &simulatorTypes.ResponseFromRRM{
 				RegionNodeEvents: nodeEvents,

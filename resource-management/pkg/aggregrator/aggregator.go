@@ -87,14 +87,14 @@ func (a *Aggregator) Run() (err error) {
 				// otherwise the method subsequentPull is called.
 				// To simplify the codes, we use one method initPullOrSubsequentPull instead
 				regionNodeEvents, length = a.initPullOrSubsequentPull(c, DefaultBatchLength, crv)
-				klog.Infof("Total (%v) region node events are pulled successfully in (%v)", len(regionNodeEvents), length)
+				klog.Infof("Total (%v) region node events are pulled successfully in (%v) RPs", length, len(regionNodeEvents))
 
 				// Convert 2D array to 1D array
 				var minRecordNodeEvents []*event.NodeEvent
 				for j := 0; j < len(regionNodeEvents); j++ {
 					minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
 				}
-				klog.Infof("Total (%v) mini node events are converted successfully in (%v)", len(minRecordNodeEvents), length)
+				klog.Infof("Total (%v) mini node events are converted successfully with length (%v)", len(minRecordNodeEvents), length)
 
 				if len(minRecordNodeEvents) != 0 {
 					// Call ProcessEvents() and get the CRV from distributor as default success
