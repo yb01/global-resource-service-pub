@@ -246,8 +246,6 @@ func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
 }
 
 func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) (bool, types.ResourceVersionMap) {
-	persistHelper.SetWaitCount(len(nodeEvents))
-
 	for _, e := range nodeEvents {
 		if e == nil {
 			break
