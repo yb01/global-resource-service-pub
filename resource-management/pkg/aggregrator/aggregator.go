@@ -141,9 +141,6 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 
 	fmt.Println(crv)
 
-	klog.Info("Sleeping 15 seconds")
-	time.Sleep(time.Second * 15)
-
 	bytes, _ := json.Marshal(PullDataFromRRM{BatchLength: batchLength, CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodGet, path, strings.NewReader((string(bytes))))
 	if err != nil {
