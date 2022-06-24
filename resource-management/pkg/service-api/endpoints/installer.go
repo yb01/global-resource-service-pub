@@ -121,13 +121,13 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 		resp.WriteHeader(http.StatusOK)
 		resp.Header().Set("Content-Type", "text/plain")
 
-		nodes, _, err := i.dist.ListNodesForClient(clientId)
+		nodes, crv, err := i.dist.ListNodesForClient(clientId)
 		if err != nil {
 			klog.V(3).Infof("error to get node list from distributor. error %v", err)
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		i.handleResponseTrunked(resp, nodes)
+		i.handleResponseTrunked(resp, nodes, crv)
 	case http.MethodPut:
 		resp.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -227,10 +227,11 @@ func getResourceVersionsMap(req *http.Request) (types.ResourceVersionMap, error)
 	return wr.ResourceVersions, nil
 }
 
-func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode) {
+func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode, crv types.ResourceVersionMap) {
 	var nodesLen = len(nodes)
 	if nodesLen <= ResponseTrunkSize {
-		ret, err := json.Marshal(nodes)
+		listResp := apiTypes.ListNodeResponse{NodeList: nodes, ResourceVersions: crv}
+		ret, err := json.Marshal(listResp)
 		if err != nil {
 			klog.Errorf("error read get node list. error %v", err)
 			resp.WriteHeader(http.StatusInternalServerError)
@@ -256,12 +257,16 @@ func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*typ
 				chunkedNodes = nodes[start:nodesLen]
 			}
 
-			ret, err := json.Marshal(chunkedNodes)
+			// TODO: optimization: only sent the crv at the last chunck
+			listResp := apiTypes.ListNodeResponse{NodeList: chunkedNodes, ResourceVersions: crv}
+			ret, err := json.Marshal(listResp)
 			if err != nil {
 				klog.Errorf("error read get node list. error %v", err)
 				resp.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+
+			klog.Infof("CRV: %v", listResp.ResourceVersions)
 			resp.Write(ret)
 			flusher.Flush()
 			start = end

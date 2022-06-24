@@ -15,6 +15,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/distributor/storage"
+	apitypes "global-resource-service/resource-management/pkg/service-api/types"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -60,6 +61,7 @@ func generateAddNodeEvent(eventNum int) []*event.NodeEvent {
 }
 
 func TestHttpGet(t *testing.T) {
+
 	distributor := setUp()
 	defer tearDown(distributor)
 
@@ -80,7 +82,7 @@ func TestHttpGet(t *testing.T) {
 	clientId := client.ClientId
 
 	// client list nodes
-	expectedNodes, _, err := distributor.ListNodesForClient(clientId)
+	expectedNodes, expectedCrv, err := distributor.ListNodesForClient(clientId)
 
 	if err != nil {
 		t.Fatal(err)
@@ -96,20 +98,27 @@ func TestHttpGet(t *testing.T) {
 
 	installer.ResourceHandler(recorder, req)
 
+	resp := apitypes.ListNodeResponse{}
 	actualNodes := make([]types.LogicalNode, 0)
-	decNodes := make([]types.LogicalNode, 0)
 
 	dec := json.NewDecoder(recorder.Body)
 
 	for dec.More() {
-		err := dec.Decode(&decNodes)
+		err := dec.Decode(&resp)
 		if err != nil {
 			klog.Errorf("decode nodes error: %v\n", err)
 		}
 
+		decNodes := make([]types.LogicalNode, len(resp.NodeList))
+		for i, n := range resp.NodeList {
+			decNodes[i] = *n
+		}
 		actualNodes = append(actualNodes, decNodes...)
 	}
 
+	actualCrv := resp.ResourceVersions
+
+	assert.Equal(t, len(expectedCrv), len(actualCrv))
 	assert.Equal(t, http.StatusOK, recorder.Code)
 	assert.Equal(t, len(expectedNodes), len(actualNodes))
 

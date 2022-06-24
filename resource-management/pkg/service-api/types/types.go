@@ -22,3 +22,8 @@ type ClientRegistrationResponse struct {
 	ClientId        string                `json:"client_id"`
 	GrantedResource types.ResourceRequest `json:"granted_resource,omitempty"`
 }
+
+type ListNodeResponse struct {
+	NodeList         []*types.LogicalNode     `json:"node_list",omitempty`
+	ResourceVersions types.ResourceVersionMap `json:"resource_version_map,omitempty"`
+}
