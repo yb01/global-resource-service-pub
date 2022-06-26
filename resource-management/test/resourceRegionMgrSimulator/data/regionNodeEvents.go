@@ -89,8 +89,8 @@ func GetRegionNodeModifiedEventsCRV(rvs types.ResourceVersionMap) (simulatorType
 
 	var count uint64 = 0
 	for j := 0; j < RpNum; j++ {
-
-		pulledNodeListEvents[j] = make([]*event.NodeEvent, NodesPerRP)
+		pulledNodeListEventsPerRP := make([]*event.NodeEvent, NodesPerRP)
+		indexPerRP := 0
 		for i := 0; i < NodesPerRP; i++ {
 			region := snapshotNodeListEvents[j][i].Node.GeoInfo.Region
 			rp := snapshotNodeListEvents[j][i].Node.GeoInfo.ResourcePartition
@@ -98,9 +98,12 @@ func GetRegionNodeModifiedEventsCRV(rvs types.ResourceVersionMap) (simulatorType
 
 			if snapshotNodeListEvents[j][i].Node.GetResourceVersionInt64() > rvs[*loc] {
 				count += 1
-				pulledNodeListEvents[j][i] = snapshotNodeListEvents[j][i]
+				pulledNodeListEventsPerRP[indexPerRP] = snapshotNodeListEvents[j][i]
+				indexPerRP += 1
 			}
 		}
+
+		pulledNodeListEvents[j] = pulledNodeListEventsPerRP[:indexPerRP]
 	}
 
 	klog.Infof("Total (%v) Modified events are to be pulled", count)
