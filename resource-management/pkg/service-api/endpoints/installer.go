@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"k8s.io/klog/v2"
 	"net/http"
+	"strconv"
 	"strings"
 
 	di "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
@@ -122,7 +123,18 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		i.handleResponseTrunked(resp, nodes, crv)
+		limit := req.URL.Query().Get(ListLimitParameter)
+		var chunkSize int
+		if len(limit) > 0 {
+			chunkSize, err = strconv.Atoi(limit)
+			if err != nil {
+				klog.Errorf("invalid limit value")
+				resp.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		i.handleResponseTrunked(resp, nodes, crv, chunkSize)
 		return
 	// hack: currently crv is used for watch watermark, this is up to 200 RPs which cannot fit as parameters or headers
 	// unfortunately GET will return 405 with request body.
@@ -255,9 +267,14 @@ func getResourceVersionsMap(req *http.Request) (types.ResourceVersionMap, error)
 	return wr.ResourceVersions, nil
 }
 
-func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode, crv types.ResourceVersionMap) {
+func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode, crv types.ResourceVersionMap, chunkSize int) {
+	responseTrunkSize := DefaultResponseTrunkSize
+	if responseTrunkSize < chunkSize {
+		responseTrunkSize = chunkSize
+	}
+	klog.V(6).Infof("Serve with chunk size: %v", responseTrunkSize)
 	var nodesLen = len(nodes)
-	if nodesLen <= ResponseTrunkSize {
+	if nodesLen <= responseTrunkSize {
 		listResp := apiTypes.ListNodeResponse{NodeList: nodes, ResourceVersions: crv}
 		ret, err := json.Marshal(listResp)
 		if err != nil {
@@ -278,7 +295,7 @@ func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*typ
 		var chunkedNodes []*types.LogicalNode
 		start := 0
 		for start < nodesLen {
-			end := start + ResponseTrunkSize
+			end := start + responseTrunkSize
 			if end < nodesLen {
 				chunkedNodes = nodes[start:end]
 			} else {

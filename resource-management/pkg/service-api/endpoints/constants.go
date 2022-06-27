@@ -16,8 +16,9 @@ const (
 	// TODO: Can be overridden by a flag at startup.
 	SecureServiceAPIPort = "443"
 
-	WatchChannelSize   = 100
-	WatchParameter     = "watch"
-	WatchParameterTrue = "true"
-	ResponseTrunkSize  = 500
+	WatchChannelSize         = 100
+	WatchParameter           = "watch"
+	WatchParameterTrue       = "true"
+	ListLimitParameter       = "limit"
+	DefaultResponseTrunkSize = 500
 )
