@@ -14,7 +14,7 @@ import (
 )
 
 type RegionConfig struct {
-	RegionId   int
+	RegionName string
 	RpNum      int
 	NodesPerRP int
 	MasterPort string

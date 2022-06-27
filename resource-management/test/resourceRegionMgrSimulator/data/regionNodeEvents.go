@@ -33,9 +33,9 @@ const at7thMin1k = 1000
 // Initialize two events list
 // RegionNodeEventsList - for initpull
 //
-func Init(regionId, rpNum, nodesPerRP int) {
-	RegionNodeEventsList = generateAddedNodeEvents(regionId, rpNum, nodesPerRP)
-	RegionId = regionId
+func Init(regionName string, rpNum, nodesPerRP int) {
+	RegionNodeEventsList = generateAddedNodeEvents(regionName, rpNum, nodesPerRP)
+	RegionId = int(location.GetRegionFromRegionName(regionName))
 	RpNum = rpNum
 	NodesPerRP = nodesPerRP
 }
@@ -43,7 +43,6 @@ func Init(regionId, rpNum, nodesPerRP int) {
 // Generate region node update event changes to
 // add them into RegionNodeEventsList
 //
-
 func MakeDataUpdate() {
 	go func() {
 		for {
@@ -116,13 +115,13 @@ func GetRegionNodeModifiedEventsCRV(rvs types.ResourceVersionMap) (simulatorType
 
 // This function is used to initialize the region node added event
 //
-func generateAddedNodeEvents(regionId, rpNum, nodesPerRP int) simulatorTypes.RegionNodeEvents {
-	regionName := location.Regions[regionId-1]
+func generateAddedNodeEvents(regionName string, rpNum, nodesPerRP int) simulatorTypes.RegionNodeEvents {
+	regionId := location.GetRegionFromRegionName(regionName)
 	eventsAdd := make(simulatorTypes.RegionNodeEvents, rpNum)
 
 	for j := 0; j < rpNum; j++ {
 		rpName := location.ResourcePartitions[j]
-		loc := location.NewLocation(regionName, rpName)
+		loc := location.NewLocation(regionId, rpName)
 
 		// Initialize the resource version starting from 0 for each RP
 		var rvToGenerateRPs = 0

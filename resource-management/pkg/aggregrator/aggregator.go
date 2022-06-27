@@ -71,6 +71,11 @@ func (a *Aggregator) Run() (err error) {
 
 	for i := 0; i < numberOfURLs; i++ {
 		go func(i int) {
+			klog.V(3).Infof("Starting goroutine for region: %v", a.urls[i])
+			defer func() {
+				klog.V(3).Infof("Existing goroutine for region: %v", a.urls[i])
+			}()
+
 			var crv types.ResourceVersionMap
 			var regionNodeEvents [][]*event.NodeEvent
 			var length uint64
@@ -79,7 +84,9 @@ func (a *Aggregator) Run() (err error) {
 			// Connect to resource region manager
 			c := a.createClient(a.urls[i])
 
+			klog.V(3).Infof("Starting loop pulling nodes from region: %v", a.urls[i])
 			for {
+				klog.V(9).Infof("Wait for 100 milisecond...")
 				time.Sleep(100 * time.Millisecond)
 
 				// Call the Pull methods
@@ -103,6 +110,7 @@ func (a *Aggregator) Run() (err error) {
 					//       The performance tested in development Mac is not good
 					eventProcess, crv = a.EventProcessor.ProcessEvents(minRecordNodeEvents)
 
+					klog.V(3).Infof("Processed nodes : results : %v", eventProcess)
 					if eventProcess {
 						a.postCRV(c, crv)
 					}

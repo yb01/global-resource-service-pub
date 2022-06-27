@@ -45,8 +45,8 @@ func Run(c *Config) error {
 	server := &http.Server{
 		Handler:      r,
 		Addr:         address,
-		WriteTimeout: 120 * time.Second,
-		ReadTimeout:  120 * time.Second,
+		WriteTimeout: 30 * time.Minute,
+		ReadTimeout:  30 * time.Minute,
 	}
 
 	// start the service and aggregator in go routines

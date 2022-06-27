@@ -18,7 +18,7 @@ func main() {
 	// Get the commandline arguments
 	c := &app.RegionConfig{}
 
-	flag.IntVar(&c.RegionId, "region_id", 9, "Region Id, if not set, default to 9")
+	flag.StringVar(&c.RegionName, "region_name", "Beijing", "Region name, if not set, default to Beijing")
 	flag.IntVar(&c.RpNum, "rp_num", 10, "The number of RPs per region, if not set, default to 10")
 	flag.IntVar(&c.NodesPerRP, "nodes_per_rp", 25000, "The number of RPs per region, if not set, default to 25000")
 	flag.StringVar(&c.MasterPort, "master_port", "9119", "Service port, if not set, default to 9119")
@@ -33,16 +33,16 @@ func main() {
 
 	defer klog.Flush()
 	klog.Info("")
-	klog.Infof("Region resource manager simulator config / region identifier:    (No.%v)", c.RegionId)
+	klog.Infof("Region resource manager simulator config / region name:    (No.%v)", c.RegionName)
 	klog.Infof("Region resource manager simulator config / rp number per region: (%v)", c.RpNum)
 	klog.Infof("Region resource manager simulator config / node number per rp:  (%v)", c.NodesPerRP)
 	klog.Info("")
-	klog.Infof("Starting resource region manager simulator (No.%v)", c.RegionId)
+	klog.Infof("Starting resource region manager simulator (%v)", c.RegionName)
 	klog.Info("")
 
 	// Initialize Added Event List and Modified Event List
 	// Region node Added Event List - for initpull
-	data.Init(c.RegionId, c.RpNum, c.NodesPerRP)
+	data.Init(c.RegionName, c.RpNum, c.NodesPerRP)
 
 	// Generate update changes
 	// at ~2 min time, 5k changes
