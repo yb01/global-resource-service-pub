@@ -28,18 +28,25 @@ func (c *DistributorPersistHelper) SetWaitCount(count int) {
 	c.persistNodeWaitGroup.Add(count)
 }
 
+func (c *DistributorPersistHelper) CallDone() {
+	c.persistNodeWaitGroup.Done()
+}
+
 func (c *DistributorPersistHelper) PersistNode(newNode *types.LogicalNode) {
 	go func(persistHelper store.StoreInterface, node *types.LogicalNode, wg *sync.WaitGroup) {
-		wg.Add(1)
 		defer wg.Done()
+		retries := 0
 		for {
 			result := persistHelper.PersistNodes([]*types.LogicalNode{newNode})
 			if result {
 				return
 			} else {
 				// TODO - error processing
-				return
+				if retries >= 5 {
+					return
+				}
 			}
+			retries++
 		}
 	}(c.persistHelper, newNode, c.persistNodeWaitGroup)
 }
