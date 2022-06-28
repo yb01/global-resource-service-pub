@@ -62,7 +62,7 @@ func main() {
 // function to print the usage info for the resource management api server
 func printUsage() {
 	fmt.Println("\nUsage: Region Resource Manager Simulator")
-	fmt.Println("\n       Per region config options: --region_id=<region Identifier>  --rp_num=<number of rp>  --nodes_per_rp=<number of nodes> --master_port=<port>")
+	fmt.Println("\n       Per region config options: --region_name=<region name>  --rp_num=<number of rp>  --nodes_per_rp=<number of nodes> --master_port=<port>")
 	fmt.Println()
 
 	os.Exit(0)
