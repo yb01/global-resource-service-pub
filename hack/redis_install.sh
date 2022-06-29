@@ -50,6 +50,14 @@ if [ `uname -s` == "Linux" ]; then
       exit 1
     fi
 
+    echo "Purge existing version of Redis ......"
+    sudo apt-get purge redis -y
+    sudo apt-get purge redis-server -y
+    sudo apt-get purge redis-tools -y
+
+    echo "Install Redis 7.0.0 ......"
+    sudo apt-get install redis-tools=$REDIS_VERSION
+    sudo apt-get install redis-server=$REDIS_VERSION
     sudo apt-get install redis=$REDIS_VERSION
     echo "End to install on Ubuntu ......"
 
@@ -79,7 +87,29 @@ elif [ `uname -s` == "Darwin" ]; then
   brew --version
 
   echo ""
-  brew install redis=7.0
+  echo "Uninstall existing version of Redis ......"
+
+  brew uninstall redis
+
+  echo "Remove three files ......"
+  REDIS_SENTINEL=/usr/local/etc/redis-sentinel.conf
+  REDIS_CONF_MacOS=/usr/local/etc/redis.conf
+  REDIS_CONF_E=/usr/local/etc/redis.conf-e
+
+  echo "Remove $REDIS_SENTINEL ......"
+  rm -rf $REDIS_SENTINEL if [ -f $REDIS_SENTINEL ]
+
+  echo "Remove $REDIS_CONF_MacOS ......"
+  rm -rf $REDIS_CONF_MacOS if [ -f $REDIS_CONF_MacOS ]
+
+  echo "Remove $REDIS_CONF_E ......"
+  rm -rf $REDIS_CONF_E if [ -f $REDIS_CONF_E ]
+
+  echo "It is done to remove three files ......"
+  echo ""
+
+  echo "Install Redis 7.0 ......"
+  brew install redis@7.0
   brew services start redis
   brew services info redis --json
 
@@ -88,7 +118,6 @@ elif [ `uname -s` == "Darwin" ]; then
   echo ""
   echo "2. Enable and Run Redis ......"
   echo "==============================="
-  REDIS_CONF_MacOS=/usr/local/etc/redis.conf
   sed -i -e "s/^# supervised auto$/supervised systemd/g" $REDIS_CONF_MacOS
   egrep -v "(^#|^$)" $REDIS_CONF_MacOS |grep "supervised "
 
