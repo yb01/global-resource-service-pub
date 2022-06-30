@@ -19,15 +19,15 @@ func NewRegionNodeEventsHander() *RegionNodeEventHandler {
 
 func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *http.Request) {
 
-	klog.Infof("Handle /resources. URL path: %s", r.URL.Path)
+	klog.V(9).Infof("Handle /resources. URL path: %s", r.URL.Path)
 
 	// Check URL Path received from aggregator client side
 	if r.URL.Path == InitPullPath {
-		klog.Info("Handle GET all region node added events via initPull")
+		klog.V(9).Info("Handle GET all region node added events via initPull")
 	} else if r.URL.Path == SubsequentPullPath {
-		klog.Info("Handle GET all region node modified events via SubsequentPull")
+		klog.V(9).Info("Handle GET all region node modified events via SubsequentPull")
 	} else if r.URL.Path == PostCRVPath {
-		klog.Info("Handle POST CRV to discard all old region node modified events")
+		klog.V(9).Info("Handle POST CRV to discard all old region node modified events")
 	} else {
 		klog.Errorf("Error: The current URL (%v) is not supported!", r.URL.Path)
 		rw.WriteHeader(http.StatusBadRequest)
@@ -77,28 +77,30 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 			nodeEvents, count = data.GetRegionNodeModifiedEventsCRV(aggregatorClientReq.CRV)
 		}
 
-		if len(nodeEvents) == 0 {
-			klog.Info("Pulling Region Node Events with batch is in the end")
+		if count == 0 {
+			klog.V(9).Info("Pulling Region Node Events with batch is in the end")
 		} else {
-			klog.Infof("Pulling Region Node Event with final batch size (%v) for (%v) RPs", count, len(nodeEvents))
+			klog.V(6).Infof("Pulling Region Node Event with final batch size (%v) for (%v) RPs", count, len(nodeEvents))
+		}
 
-			response := &simulatorTypes.ResponseFromRRM{
-				RegionNodeEvents: nodeEvents,
-				RvMap:            aggregatorClientReq.CRV,
-				Length:           uint64(count),
-			}
+		response := &simulatorTypes.ResponseFromRRM{
+			RegionNodeEvents: nodeEvents,
+			RvMap:            aggregatorClientReq.CRV,
+			Length:           uint64(count),
+		}
 
-			// Serialize region node events result to JSON
-			err = response.ToJSON(rw)
+		// Serialize region node events result to JSON
+		err = response.ToJSON(rw)
 
-			if err != nil {
-				klog.Errorf("Error - Unable to marshal json : ", err)
-			}
+		if err != nil {
+			klog.Errorf("Error - Unable to marshal json : ", err)
+		}
 
+		if count != 0 {
 			if r.URL.Path == InitPullPath {
-				klog.Info("Handle GET all region node added events via initPull successfully")
+				klog.V(3).Infof("Handle GET all (%v) region node added events via initPull successfully", count)
 			} else {
-				klog.Info("Handle GET all region node modified events via SubsequentPull succesfully")
+				klog.V(3).Infof("Handle GET all (%v) region node modified events via SubsequentPull succesfully", count)
 			}
 		}
 
@@ -114,6 +116,6 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 			klog.Errorf("Error - Unable to marshal json : ", err)
 		}
 
-		klog.Info("Handle POST CRV to discard all old region node modified events successfully")
+		klog.V(3).Info("Handle POST CRV to discard all old region node modified events successfully")
 	}
 }

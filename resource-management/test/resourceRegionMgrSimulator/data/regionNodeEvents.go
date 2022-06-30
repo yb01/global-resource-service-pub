@@ -51,17 +51,17 @@ func MakeDataUpdate() {
 			// At 2th minute mark, generate 5k modified and added node events
 			time.Sleep(2 * time.Minute)
 			makeDataUpdate(at2thMin5k)
-			klog.Info("At 2th minute mark, generating 5k modified and added node events is completed")
+			klog.V(3).Info("At 2th minute mark, generating 5k modified and added node events is completed")
 
 			// At 5th time mark, generate 25k modified node events
 			time.Sleep(3 * time.Minute)
 			makeDataUpdate(at5thMin25k)
-			klog.Info("At 5th time mark, generating 25k modified node events is completed")
+			klog.V(3).Info("At 5th time mark, generating 25k modified node events is completed")
 
 			// At 7th time mark, generate 1k modified events
 			time.Sleep(2 * time.Minute)
 			makeDataUpdate(at7thMin1k)
-			klog.Info("At 7th time mark, generating 1k modified events is completed")
+			klog.V(3).Info("At 7th time mark, generating 1k modified events is completed")
 		}
 	}()
 }
@@ -74,7 +74,7 @@ func MakeDataUpdate() {
 // TO DO: paginate support
 //
 func GetRegionNodeAddedEvents(batchLength uint64) (simulatorTypes.RegionNodeEvents, uint64) {
-	klog.Infof("Total (%v) Added events are to be pulled", RpNum*NodesPerRP)
+	klog.V(6).Infof("Total (%v) Added events are to be pulled", RpNum*NodesPerRP)
 	return RegionNodeEventsList, uint64(RpNum * NodesPerRP)
 
 }
@@ -105,7 +105,7 @@ func GetRegionNodeModifiedEventsCRV(rvs types.ResourceVersionMap) (simulatorType
 		pulledNodeListEvents[j] = pulledNodeListEventsPerRP[:indexPerRP]
 	}
 
-	klog.Infof("Total (%v) Modified events are to be pulled", count)
+	klog.V(9).Infof("Total (%v) Modified events are to be pulled", count)
 	return pulledNodeListEvents, count
 }
 
@@ -182,7 +182,7 @@ func makeDataUpdate(changesThreshold int) {
 		}
 	}
 
-	klog.Infof("Actually total (%v) new modified events are created.", changesThreshold)
+	klog.V(6).Infof("Actually total (%v) new modified events are created.", changesThreshold)
 }
 
 // Create logical node with random UUID

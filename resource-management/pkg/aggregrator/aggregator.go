@@ -2,7 +2,6 @@ package aggregrator
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -94,25 +93,27 @@ func (a *Aggregator) Run() (err error) {
 				// otherwise the method subsequentPull is called.
 				// To simplify the codes, we use one method initPullOrSubsequentPull instead
 				regionNodeEvents, length = a.initPullOrSubsequentPull(c, DefaultBatchLength, crv)
-				klog.Infof("Total (%v) region node events are pulled successfully in (%v) RPs", length, len(regionNodeEvents))
+				if length != 0 {
+					klog.V(6).Infof("Total (%v) region node events are pulled successfully in (%v) RPs", length, len(regionNodeEvents))
 
-				// Convert 2D array to 1D array
-				var minRecordNodeEvents []*event.NodeEvent
-				for j := 0; j < len(regionNodeEvents); j++ {
-					minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
-				}
-				klog.Infof("Total (%v) mini node events are converted successfully with length (%v)", len(minRecordNodeEvents), length)
+					// Convert 2D array to 1D array
+					var minRecordNodeEvents []*event.NodeEvent
+					for j := 0; j < len(regionNodeEvents); j++ {
+						minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
+					}
+					klog.V(9).Infof("Total (%v) mini node events are converted successfully with length (%v)", len(minRecordNodeEvents), length)
 
-				if len(minRecordNodeEvents) != 0 {
-					// Call ProcessEvents() and get the CRV from distributor as default success
-					// TODO:
-					//    1. Call the ProcessEvents Per RP to unload some cost from the Distributor
-					//       The performance tested in development Mac is not good
-					eventProcess, crv = a.EventProcessor.ProcessEvents(minRecordNodeEvents)
+					if len(minRecordNodeEvents) != 0 {
+						// Call ProcessEvents() and get the CRV from distributor as default success
+						// TODO:
+						//    1. Call the ProcessEvents Per RP to unload some cost from the Distributor
+						//       The performance tested in development Mac is not good
+						eventProcess, crv = a.EventProcessor.ProcessEvents(minRecordNodeEvents)
 
-					klog.V(3).Infof("Processed nodes : results : %v", eventProcess)
-					if eventProcess {
-						a.postCRV(c, crv)
+						klog.V(3).Infof("Event Processor Processed nodes : results : %v", eventProcess)
+						if eventProcess {
+							a.postCRV(c, crv)
+						}
 					}
 				}
 			}
@@ -147,7 +148,7 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 		path = httpPrefix + c.BaseURL + "/resources/subsequentpull"
 	}
 
-	fmt.Println(crv)
+	klog.V(9).Infof("CRV : (%v)", crv)
 
 	bytes, _ := json.Marshal(PullDataFromRRM{BatchLength: batchLength, CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodGet, path, strings.NewReader((string(bytes))))

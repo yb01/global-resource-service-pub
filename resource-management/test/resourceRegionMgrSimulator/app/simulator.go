@@ -57,7 +57,7 @@ func Run(c *RegionConfig) error {
 	}
 
 	go func() {
-		klog.Infof("\nStarting resource region manager simulator server on port (%v)", c.MasterPort)
+		klog.V(3).Infof("\nStarting resource region manager simulator server on port (%v)", c.MasterPort)
 
 		err := s.ListenAndServe()
 		if err != nil {
@@ -69,7 +69,7 @@ func Run(c *RegionConfig) error {
 	signal.Notify(sigChan, os.Interrupt)
 
 	sig := <-sigChan
-	klog.Infof("\n\nReceived terminate, graceful shutdown\n\n", sig)
+	klog.V(3).Infof("\n\nReceived terminate, graceful shutdown\n\n", sig)
 
 	tc, err := context.WithTimeout(context.Background(), 30*time.Second)
 	if err != nil {
