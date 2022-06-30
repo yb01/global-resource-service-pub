@@ -57,7 +57,8 @@ func printUsage() {
 	// klog will use commandline log parameters with nil as named a few below:
 	// --alsologtostderr=true  --logtostderr=false --log_file="/tmp/grs.log"
 	fmt.Println("logging options: --alsologtostderr=true  --logtostderr=false --log_file=/tmp/grs.log ")
-	fmt.Println("service config options: --master_ip=<ip address>  --master_port=<port> --resource_urls=<url1,url2,...>")
+	fmt.Println("service config options: --master_ip=<master address>  --master_port=<port> --resource_urls=<url1,url2,...>")
+	fmt.Println("Explanation: <master address> could be public ip address or public dns name of the server")
 
 	os.Exit(0)
 }
