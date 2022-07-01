@@ -339,9 +339,9 @@ func TestRegistrationWorkflow(t *testing.T) {
 	// check each node event
 	nodeIds := make(map[string]bool)
 	for _, node := range nodes {
-		nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+		nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition (node.GeoInfo.ResourcePartition)}
 		assert.NotNil(t, nodeLoc)
-		assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+		assert.True(t, latestRVs[nodeLoc] >= node.GetResourceVersionInt64())
 		if _, isOK := nodeIds[node.Id]; isOK {
 			assert.Fail(t, "List nodes cannot have more than one copy of a node")
 		} else {
@@ -355,8 +355,9 @@ func TestRegistrationWorkflow(t *testing.T) {
 	updateNodeEvents := generatedUpdateNodeEventsFromNodeList(nodes)
 	result2, rvMap2 := distributor.ProcessEvents(updateNodeEvents)
 	assert.True(t, result2, "Expecting update nodes successfully")
-	loc := location.NewLocation(location.Region(nodes[0].GeoInfo.Region), location.ResourcePartition(nodes[0].GeoInfo.ResourcePartition))
-	assert.Equal(t, uint64(rvToGenerate), rvMap2[*loc])
+	loc := types.RvLocation{Region: location.Region(nodes[0].GeoInfo.Region), Partition: location.ResourcePartition (nodes[0].GeoInfo.ResourcePartition)}
+
+	assert.Equal(t, uint64(rvToGenerate), rvMap2[loc])
 	assert.Equal(t, oldNodeRV, nodes[0].GetResourceVersionInt64(), "Expecting listed nodes are snapshoted and cannot be affected by update")
 
 	// client watch node update
@@ -370,7 +371,8 @@ func TestRegistrationWorkflow(t *testing.T) {
 	watchedEventCount := 0
 	for e := range watchCh {
 		assert.Equal(t, event.Modified, e.Type)
-		nodeLoc := location.NewLocation(location.Region(e.Node.GeoInfo.Region), location.ResourcePartition(e.Node.GeoInfo.ResourcePartition))
+		nodeLoc := types.RvLocation{Region: location.Region(e.Node.GeoInfo.Region), Partition: location.ResourcePartition (e.Node.GeoInfo.ResourcePartition)}
+
 		assert.Equal(t, loc, nodeLoc)
 		watchedEventCount++
 

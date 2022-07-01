@@ -31,7 +31,7 @@ type ClientOfRRM struct {
 //
 type ResponseFromRRM struct {
 	RegionNodeEvents [][]*event.NodeEvent
-	RvMap            types.ResourceVersionMap
+	RvMap            types.TransitResourceVersionMap
 	Length           uint64
 }
 
@@ -40,7 +40,7 @@ type ResponseFromRRM struct {
 type PullDataFromRRM struct {
 	BatchLength uint64
 	DefaultCRV  uint64
-	CRV         types.ResourceVersionMap
+	CRV         types.TransitResourceVersionMap
 }
 
 const (
@@ -75,7 +75,7 @@ func (a *Aggregator) Run() (err error) {
 				klog.V(3).Infof("Existing goroutine for region: %v", a.urls[i])
 			}()
 
-			var crv types.ResourceVersionMap
+			var crv types.TransitResourceVersionMap
 			var regionNodeEvents [][]*event.NodeEvent
 			var length uint64
 			var eventProcess bool
@@ -139,7 +139,7 @@ func (a *Aggregator) createClient(url string) *ClientOfRRM {
 // or
 // Call the resource region manager's SubsequentPull method {url}/resources/subsequentpull when crv is not nil
 //
-func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64, crv types.ResourceVersionMap) ([][]*event.NodeEvent, uint64) {
+func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64, crv types.TransitResourceVersionMap) ([][]*event.NodeEvent, uint64) {
 	var path string
 
 	if len(crv) == 0 {
@@ -184,7 +184,7 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 // Call resource region manager's POST method {url}/resources/crv to update the CRV
 // error indicate failed POST, CRV means Composite Resource Version
 //
-func (a *Aggregator) postCRV(c *ClientOfRRM, crv types.ResourceVersionMap) error {
+func (a *Aggregator) postCRV(c *ClientOfRRM, crv types.TransitResourceVersionMap) error {
 	path := httpPrefix + c.BaseURL + "/resources/crv"
 	bytes, _ := json.Marshal(PullDataFromRRM{CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodPost, path, strings.NewReader((string(bytes))))

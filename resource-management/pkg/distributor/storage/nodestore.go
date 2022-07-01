@@ -67,21 +67,23 @@ func (vs *VirtualNodeStore) GetRange() (float64, float64) {
 	return vs.lowerbound, vs.upperbound
 }
 
-func (vs *VirtualNodeStore) SnapShot() ([]*types.LogicalNode, types.ResourceVersionMap) {
+// Snapshot generates a list of node for the List() call from a client, and a current RV map to client
+func (vs *VirtualNodeStore) SnapShot() ([]*types.LogicalNode, types.TransitResourceVersionMap) {
 	vs.mu.RLock()
 	defer vs.mu.RUnlock()
 	nodesCopy := make([]*types.LogicalNode, len(vs.nodeEventByHash))
 	index := 0
-	rvs := make(types.ResourceVersionMap)
+	rvs := make(types.TransitResourceVersionMap)
 	for _, node := range vs.nodeEventByHash {
 		nodesCopy[index] = node.CopyNode()
 		newRV := node.GetResourceVersion()
-		if lastRV, isOK := rvs[*node.GetLocation()]; isOK {
+		rvLoc := *node.GetRvLocation()
+		if lastRV, isOK := rvs[rvLoc]; isOK {
 			if lastRV < newRV {
-				rvs[*node.GetLocation()] = newRV
+				rvs[rvLoc] = newRV
 			}
 		} else {
-			rvs[*node.GetLocation()] = newRV
+			rvs[rvLoc] = newRV
 		}
 		index++
 	}
@@ -156,14 +158,14 @@ func NewNodeStore(vNodeNumPerRP int, regionNum int, partitionMaxNum int) *NodeSt
 }
 
 // TODO - verify whether the original value can be changed. If so, return a deepcopy
-func (ns *NodeStore) GetCurrentResourceVersions() types.ResourceVersionMap {
+func (ns *NodeStore) GetCurrentResourceVersions() types.TransitResourceVersionMap {
 	ns.rvLock.RLock()
 	defer ns.rvLock.RUnlock()
-	rvMap := make(types.ResourceVersionMap)
+	rvMap := make(types.TransitResourceVersionMap)
 	for i := 0; i < ns.regionNum; i++ {
 		for j := 0; j < ns.partitionMaxNum; j++ {
 			if ns.currentRVs[i][j] > 0 {
-				rvMap[*location.NewLocation(location.Regions[i], location.ResourcePartitions[j])] = ns.currentRVs[i][j]
+				rvMap[types.RvLocation{Region: location.Regions[i], Partition: location.ResourcePartitions[j]}] = ns.currentRVs[i][j]
 			}
 		}
 	}
@@ -245,7 +247,7 @@ func (ns *NodeStore) UpdateNode(nodeEvent *node.ManagedNodeEvent) {
 func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
 }
 
-func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) (bool, types.ResourceVersionMap) {
+func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) (bool, types.TransitResourceVersionMap) {
 	persistHelper.SetWaitCount(len(nodeEvents))
 	for _, e := range nodeEvents {
 		if e == nil {

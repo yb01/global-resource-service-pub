@@ -5,7 +5,7 @@ import "global-resource-service/resource-management/pkg/common-lib/types"
 // WatchRequest is the request body of the Watch API call
 // ResourceVersionMap is part of the return of the LIST API call
 type WatchRequest struct {
-	ResourceVersions types.ResourceVersionMap `json:"resource_versions"`
+	ResourceVersions types.TransitResourceVersionMap `json:"resource_versions"`
 }
 
 // ClientRegistrationRequest is the request body when a client register to the resource management service
@@ -28,5 +28,5 @@ type ClientRegistrationResponse struct {
 // ResourceVersions are the list of RVs from each RP
 type ListNodeResponse struct {
 	NodeList         []*types.LogicalNode     `json:"node_list",omitempty`
-	ResourceVersions types.ResourceVersionMap `json:"resource_version_map,omitempty"`
+	ResourceVersions types.TransitResourceVersionMap `json:"resource_version_map,omitempty"`
 }

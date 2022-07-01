@@ -78,7 +78,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			}
 
 			// client list nodes
-			latestRVsByClient := make([]types.ResourceVersionMap, tt.clientNum)
+			latestRVsByClient := make([]types.TransitResourceVersionMap, tt.clientNum)
 			nodesByClient := make([][]*types.LogicalNode, tt.clientNum)
 			for i := 0; i < tt.clientNum; i++ {
 				clientId := clientIds[i]
@@ -97,9 +97,9 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 				// check each node event
 				nodeIds := make(map[string]bool)
 				for _, node := range nodes {
-					nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+					nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition (node.GeoInfo.ResourcePartition)}
 					assert.NotNil(t, nodeLoc)
-					assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+					assert.True(t, latestRVs[nodeLoc] >= node.GetResourceVersionInt64())
 					if _, isOK := nodeIds[node.Id]; isOK {
 						assert.Fail(t, "List nodes cannot have more than one copy of a node")
 					} else {
@@ -262,7 +262,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			duration += time.Since(start)
 
 			// client list nodes
-			latestRVsByClient := make([]types.ResourceVersionMap, tt.clientNum)
+			latestRVsByClient := make([]types.TransitResourceVersionMap, tt.clientNum)
 			nodesByClient := make([][]*types.LogicalNode, tt.clientNum)
 			wg.Add(tt.clientNum)
 
@@ -282,9 +282,9 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 					// check each node event
 					nodeIds := make(map[string]bool)
 					for _, node := range nodes {
-						nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+						nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition (node.GeoInfo.ResourcePartition)}
 						assert.NotNil(t, nodeLoc)
-						assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+						assert.True(t, latestRVs[nodeLoc] >= node.GetResourceVersionInt64())
 						if _, isOK := nodeIds[node.Id]; isOK {
 							assert.Fail(t, "List nodes cannot have more than one copy of a node")
 						} else {

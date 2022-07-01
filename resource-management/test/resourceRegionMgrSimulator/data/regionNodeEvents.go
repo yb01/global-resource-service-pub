@@ -82,7 +82,7 @@ func GetRegionNodeAddedEvents(batchLength uint64) (simulatorTypes.RegionNodeEven
 // Return region node modified events with CRVs in BATCH LENGTH from all RPs
 // TO DO: paginate support
 //
-func GetRegionNodeModifiedEventsCRV(rvs types.ResourceVersionMap) (simulatorTypes.RegionNodeEvents, uint64) {
+func GetRegionNodeModifiedEventsCRV(rvs types.TransitResourceVersionMap) (simulatorTypes.RegionNodeEvents, uint64) {
 	snapshotNodeListEvents = RegionNodeEventsList
 	pulledNodeListEvents := make(simulatorTypes.RegionNodeEvents, RpNum)
 
@@ -93,9 +93,9 @@ func GetRegionNodeModifiedEventsCRV(rvs types.ResourceVersionMap) (simulatorType
 		for i := 0; i < NodesPerRP; i++ {
 			region := snapshotNodeListEvents[j][i].Node.GeoInfo.Region
 			rp := snapshotNodeListEvents[j][i].Node.GeoInfo.ResourcePartition
-			loc := location.NewLocation(location.Region(region), location.ResourcePartition(rp))
+			loc := types.RvLocation{Region: location.Region(region), Partition: location.ResourcePartition(rp)}
 
-			if snapshotNodeListEvents[j][i].Node.GetResourceVersionInt64() > rvs[*loc] {
+			if snapshotNodeListEvents[j][i].Node.GetResourceVersionInt64() > rvs[loc] {
 				count += 1
 				pulledNodeListEventsPerRP[indexPerRP] = snapshotNodeListEvents[j][i]
 				indexPerRP += 1

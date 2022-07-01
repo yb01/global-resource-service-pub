@@ -170,7 +170,9 @@ func (dis *ResourceDistributor) getSortedVirtualStores(stores map[*storage.Virtu
 	return sortedStores
 }
 
-func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.LogicalNode, types.ResourceVersionMap, error) {
+// ListNodesForClient returns list of nodes for a client request and a RV map to the client for WATCH
+//                            or error encountered during the node allocation/listing for the client
+func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.LogicalNode, types.TransitResourceVersionMap, error) {
 	if clientId == "" {
 		return nil, nil, errors.New("Empty clientId")
 	}
@@ -187,7 +189,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Lo
 
 	eventQueue.AcquireSnapshotRLock()
 	nodesByStore := make([][]*types.LogicalNode, len(assignedStores))
-	rvMapByStore := make([]types.ResourceVersionMap, len(assignedStores))
+	rvMapByStore := make([]types.TransitResourceVersionMap, len(assignedStores))
 	hostCount := 0
 	for i := 0; i < len(assignedStores); i++ {
 		nodesByStore[i], rvMapByStore[i] = assignedStores[i].SnapShot()
@@ -206,7 +208,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Lo
 	}
 
 	// combine to single ResourceVersionMap
-	finalRVs := make(types.ResourceVersionMap)
+	finalRVs := make(types.TransitResourceVersionMap)
 	for i := 0; i < len(rvMapByStore); i++ {
 		currentRVs := rvMapByStore[i]
 		for loc, rv := range currentRVs {
@@ -223,7 +225,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Lo
 	return nodes, finalRVs, nil
 }
 
-func (dis *ResourceDistributor) Watch(clientId string, rvs types.ResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error {
+func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error {
 	var nodeEventQueue *cache.NodeEventQueue
 	var isOK bool
 	if nodeEventQueue, isOK = dis.nodeEventQueueMap[clientId]; !isOK || nodeEventQueue == nil {
@@ -239,10 +241,12 @@ func (dis *ResourceDistributor) Watch(clientId string, rvs types.ResourceVersion
 		return errors.New("Stop watch channel not provided")
 	}
 
-	return nodeEventQueue.Watch(rvs, watchChan, stopCh)
+	internal_rvs := types.ConvertToInternalResourceVersionMap(rvs)
+
+	return nodeEventQueue.Watch(internal_rvs, watchChan, stopCh)
 }
 
-func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, types.ResourceVersionMap) {
+func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, types.TransitResourceVersionMap) {
 	eventsToProcess := make([]*node.ManagedNodeEvent, len(events))
 	for i := 0; i < len(events); i++ {
 		if events[i] != nil {

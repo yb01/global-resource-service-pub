@@ -1,7 +1,6 @@
 package location
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -237,7 +236,7 @@ func GetRPNum() int {
 	return len(ResourcePartitions)
 }
 
-// TODO - read resource parition from configuration or metadata server
+// TODO - read resource partition from configuration or metadata server
 func GetRPsForRegion(region Region) []ResourcePartition {
 	rpsForRegion := make([]ResourcePartition, len(ResourcePartitions))
 	for i := 0; i < len(ResourcePartitions); i++ {
@@ -265,14 +264,4 @@ func (loc *Location) Equal(locToCompare Location) bool {
 
 func (loc *Location) String() string {
 	return fmt.Sprintf("[Region %s, ResoucePartition %s]", loc.region, loc.partition)
-}
-
-func (loc Location) MarshalText() (text []byte, err error) {
-	type l Location
-	return json.Marshal(l(loc))
-}
-
-func (loc *Location) UnmarshalText(text []byte) error {
-	type l Location
-	return json.Unmarshal(text, (*l)(loc))
 }

@@ -248,7 +248,7 @@ func getClinetId(req *http.Request) string {
 	return clientId
 }
 
-func getResourceVersionsMap(req *http.Request) (types.ResourceVersionMap, error) {
+func getResourceVersionsMap(req *http.Request) (types.TransitResourceVersionMap, error) {
 	body, err := ioutil.ReadAll(req.Body)
 
 	if err != nil {
@@ -267,7 +267,7 @@ func getResourceVersionsMap(req *http.Request) (types.ResourceVersionMap, error)
 	return wr.ResourceVersions, nil
 }
 
-func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode, crv types.ResourceVersionMap, chunkSize int) {
+func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*types.LogicalNode, crv types.TransitResourceVersionMap, chunkSize int) {
 	responseTrunkSize := DefaultResponseTrunkSize
 	if responseTrunkSize < chunkSize {
 		responseTrunkSize = chunkSize

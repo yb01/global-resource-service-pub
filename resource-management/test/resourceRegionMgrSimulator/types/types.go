@@ -16,7 +16,7 @@ type PostCRVstatus bool
 //
 type ResponseFromRRM struct {
 	RegionNodeEvents [][]*event.NodeEvent
-	RvMap            types.ResourceVersionMap
+	RvMap            types.TransitResourceVersionMap
 	Length           uint64
 }
 
@@ -25,7 +25,7 @@ type ResponseFromRRM struct {
 type PullDataFromRRM struct {
 	BatchLength uint64
 	DefaultCRV  uint64
-	CRV         types.ResourceVersionMap
+	CRV         types.TransitResourceVersionMap
 }
 
 // ToJSON serializes the contents of the collection to JSON

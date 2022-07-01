@@ -30,6 +30,11 @@ func (n *ManagedNodeEvent) GetLocation() *location.Location {
 	return n.loc
 }
 
+func (n *ManagedNodeEvent) GetRvLocation() *types.RvLocation {
+
+	return &types.RvLocation{Region: n.loc.GetRegion(), Partition: n.loc.GetResourcePartition()}
+}
+
 func (n *ManagedNodeEvent) GetResourceVersion() uint64 {
 	rv, err := strconv.ParseUint(n.nodeEvent.Node.ResourceVersion, 10, 64)
 	if err != nil {

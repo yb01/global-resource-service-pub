@@ -84,7 +84,7 @@ func TestPersistNodes(t *testing.T) {
 // Simply Test Persist Node Store Status
 //
 func TestPersistNodeStoreStatus(t *testing.T) {
-	var CRV = make(types.ResourceVersionMap, 1)
+	var CRV = make(types.TransitResourceVersionMap, 1)
 	testLocation := location.NewLocation(location.Beijing, location.ResourcePartition1)
 	CRV[*testLocation] = 1000
 
