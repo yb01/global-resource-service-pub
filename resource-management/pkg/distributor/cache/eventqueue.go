@@ -7,6 +7,7 @@ import (
 	"sort"
 	"sync"
 
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
@@ -172,7 +173,9 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 				if !ok {
 					break
 				}
+				event.SetCheckpoint(metrics.Distributor_Sending)
 				downstreamCh <- event
+				event.SetCheckpoint(metrics.Distributor_Sent)
 			}
 		}
 
