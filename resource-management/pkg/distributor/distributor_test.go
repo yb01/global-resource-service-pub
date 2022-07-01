@@ -381,3 +381,131 @@ func TestRegistrationWorkflow(t *testing.T) {
 	assert.Equal(t, len(nodes), watchedEventCount)
 	t.Logf("Latest rvs after updates: %v\n", rvMap2)
 }
+
+func TestWatchRenewal(t *testing.T) {
+	distributor := setUp()
+	defer tearDown()
+
+	// initialize node store with 10K nodes
+	eventsAdd := generateAddNodeEvent(10000, defaultLocBeijing_RP1)
+	result, rvMap := distributor.ProcessEvents(eventsAdd)
+	assert.True(t, result)
+	assert.NotNil(t, rvMap)
+	assert.Equal(t, 10000, distributor.defaultNodeStore.GetTotalHostNum())
+
+	// register client
+	requestedHostNum := 500
+
+	client := types.Client{ClientId: uuid.New().String(), Resource: types.ResourceRequest{TotalMachines: requestedHostNum}, ClientInfo: types.ClientInfoType{}}
+	err := distributor.RegisterClient(&client)
+	clientId := client.ClientId
+	assert.NotNil(t, clientId, "Expecting not nil client id")
+	assert.False(t, clientId == "", "Expecting non empty client id")
+	assert.Nil(t, err, "Expecting nil error")
+
+	// client list nodes
+	nodes, latestRVs, err := distributor.ListNodesForClient(clientId)
+	assert.Nil(t, err)
+	assert.NotNil(t, latestRVs)
+	assert.True(t, len(nodes) >= 500)
+	t.Logf("Latest rvs: %v. Total hosts: %d\n", latestRVs, len(nodes))
+	// check each node event
+	nodeIds := make(map[string]bool)
+	for _, node := range nodes {
+		nodeLoc := location.NewLocation(location.Region(node.GeoInfo.Region), location.ResourcePartition(node.GeoInfo.ResourcePartition))
+		assert.NotNil(t, nodeLoc)
+		assert.True(t, latestRVs[*nodeLoc] >= node.GetResourceVersionInt64())
+		if _, isOK := nodeIds[node.Id]; isOK {
+			assert.Fail(t, "List nodes cannot have more than one copy of a node")
+		} else {
+			nodeIds[node.Id] = true
+		}
+	}
+	assert.Equal(t, len(nodes), len(nodeIds))
+	loc := location.NewLocation(location.Region(nodes[0].GeoInfo.Region), location.ResourcePartition(nodes[0].GeoInfo.ResourcePartition))
+
+	// client watch node update
+	watchCh := make(chan *event.NodeEvent)
+	stopCh := make(chan struct{})
+	err = distributor.Watch(clientId, latestRVs, watchCh, stopCh)
+	if err != nil {
+		assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
+		return
+	}
+
+	wgForWatchEvent := new(sync.WaitGroup)
+	wgForWatchEvent.Add(1)
+	lastRVWatched := new(int)
+	watchedEventCount := new(int)
+	*watchedEventCount = 0
+	watch(t, wgForWatchEvent, lastRVWatched, watchedEventCount, len(nodes), watchCh, loc)
+
+	// generate update node events
+	updateNodeEvents := generatedUpdateNodeEventsFromNodeList(nodes)
+	result2, rvMap2 := distributor.ProcessEvents(updateNodeEvents)
+	assert.True(t, result2, "Expecting update nodes successfully")
+
+	// wait for event watch
+	wgForWatchEvent.Wait()
+
+	assert.Equal(t, len(nodes), *watchedEventCount)
+	assert.Equal(t, rvMap2[*loc], uint64(*lastRVWatched))
+	t.Logf("Latest rvs after updates: %v\n", rvMap2)
+
+	// watch renewal
+	t.Logf("Watch renewal .....................")
+	close(stopCh)
+	time.Sleep(100 * time.Millisecond) // note here sleep is necessary. otherwise previous watch channel was not successfully discarded
+	watchCh2 := make(chan *event.NodeEvent)
+	stopCh2 := make(chan struct{})
+	err = distributor.Watch(clientId, rvMap2, watchCh2, stopCh2)
+	if err != nil {
+		assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
+		return
+	}
+
+	wgForWatchEvent2 := new(sync.WaitGroup)
+	wgForWatchEvent2.Add(1)
+	lastRVWatched2 := new(int)
+	watchedEventCount2 := new(int)
+	*watchedEventCount2 = 0
+	watch(t, wgForWatchEvent2, lastRVWatched2, watchedEventCount2, len(nodes), watchCh2, loc)
+
+	// generate update node events
+	updateNodeEvents2 := generatedUpdateNodeEventsFromNodeList(nodes)
+	result3, rvMap3 := distributor.ProcessEvents(updateNodeEvents2)
+	assert.True(t, result3, "Expecting update nodes successfully")
+
+	// wait for event watch
+	wgForWatchEvent2.Wait()
+
+	assert.Equal(t, len(nodes), *watchedEventCount2)
+	assert.Equal(t, rvMap3[*loc], uint64(*lastRVWatched2))
+	t.Logf("Latest rvs after updates: %v\n", rvMap3)
+}
+
+func watch(t *testing.T, wg *sync.WaitGroup, lastRVResult *int, watchedEventCount *int, expectedEventCount int, watchCh chan *event.NodeEvent, loc *location.Location) {
+	go func(wg *sync.WaitGroup, t *testing.T, lastRVResult *int, watchedEventCount *int, expectedEventCount int) {
+		lastRV := int(0)
+		for e := range watchCh {
+			assert.Equal(t, event.Modified, e.Type)
+			nodeLoc := location.NewLocation(location.Region(e.Node.GeoInfo.Region), location.ResourcePartition(e.Node.GeoInfo.ResourcePartition))
+			assert.Equal(t, loc, nodeLoc)
+			*watchedEventCount++
+
+			newRV, _ := strconv.Atoi(e.Node.ResourceVersion)
+			if newRV < lastRV {
+				t.Logf("Got event with rv %d later than rv %d", newRV, lastRV)
+			} else {
+				lastRV = newRV
+			}
+
+			if *watchedEventCount >= expectedEventCount {
+				t.Logf("Last RV watched %v\n", lastRV)
+				*lastRVResult = lastRV
+				wg.Done()
+				return
+			}
+		}
+	}(wg, t, lastRVResult, watchedEventCount, expectedEventCount)
+}

@@ -48,7 +48,7 @@ func (qloc *nodeEventQueueByLoc) enqueueEvent(e *node.ManagedNodeEvent) {
 	qloc.endPos++
 }
 
-func (qloc *nodeEventQueueByLoc) dequeueEvents(startIndex int) ([]*event.NodeEvent, error) {
+func (qloc *nodeEventQueueByLoc) getEventsFromIndex(startIndex int) ([]*event.NodeEvent, error) {
 	qloc.eqLock.RLock()
 	defer qloc.eqLock.RUnlock()
 
@@ -61,8 +61,6 @@ func (qloc *nodeEventQueueByLoc) dequeueEvents(startIndex int) ([]*event.NodeEve
 	for i := 0; i < length; i++ {
 		result[i] = qloc.circularEventQueue[(startIndex+i)%LengthOfNodeEventQueue].GetNodeEvent()
 	}
-
-	qloc.startPos = qloc.endPos
 
 	return result, nil
 }
@@ -83,6 +81,7 @@ func (qloc *nodeEventQueueByLoc) getEventIndexSinceResourceVersion(resourceVersi
 	index := sort.Search(qloc.endPos-qloc.startPos, func(i int) bool {
 		return qloc.circularEventQueue[(qloc.startPos+i)%LengthOfNodeEventQueue].GetResourceVersion() > resourceVersion
 	})
+	index += qloc.startPos
 	if index == qloc.endPos {
 		return -1, types.Error_EndOfEventQueue
 	}
@@ -205,9 +204,9 @@ func (eq *NodeEventQueue) getAllEventsSinceResourceVersion(rvs types.ResourceVer
 		var events []*event.NodeEvent
 		var err error
 		if isOK {
-			events, err = qByLoc.dequeueEvents(startIndex)
+			events, err = qByLoc.getEventsFromIndex(startIndex)
 		} else {
-			events, err = qByLoc.dequeueEvents(qByLoc.startPos)
+			events, err = qByLoc.getEventsFromIndex(qByLoc.startPos)
 		}
 		if err != nil {
 			return nil, err

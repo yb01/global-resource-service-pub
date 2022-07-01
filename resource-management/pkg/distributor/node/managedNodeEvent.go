@@ -22,17 +22,6 @@ func NewManagedNodeEvent(nodeEvent *event.NodeEvent, loc *location.Location) *Ma
 	}
 }
 
-func NewManagedNodeEvent1(id, rv string, eventType event.EventType, location *location.Location) *ManagedNodeEvent {
-	nodeEvent := event.NewNodeEvent(
-		&types.LogicalNode{Id: id, ResourceVersion: rv},
-		eventType)
-
-	return &ManagedNodeEvent{
-		nodeEvent: nodeEvent,
-		loc:       location,
-	}
-}
-
 func (n *ManagedNodeEvent) GetId() string {
 	return n.nodeEvent.Node.Id
 }
