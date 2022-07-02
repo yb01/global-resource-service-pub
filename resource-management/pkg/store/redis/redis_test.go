@@ -85,8 +85,8 @@ func TestPersistNodes(t *testing.T) {
 //
 func TestPersistNodeStoreStatus(t *testing.T) {
 	var CRV = make(types.TransitResourceVersionMap, 1)
-	testLocation := location.NewLocation(location.Beijing, location.ResourcePartition1)
-	CRV[*testLocation] = 1000
+	testLocation := types.RvLocation{Region: location.Beijing, Partition: location.ResourcePartition1}
+	CRV[testLocation] = 1000
 
 	testCase0 := &store.NodeStoreStatus{
 		RegionNum:              1000,
@@ -122,9 +122,9 @@ func TestPersistNodeStoreStatus(t *testing.T) {
 		t.Error("testCases0.VirtualNodeNumPerRP      is : ", testCase0.VirtualNodeNumPerRP)
 	}
 
-	if nodeStoreStatus.CurrentResourceVerions[*testLocation] != testCase0.CurrentResourceVerions[*testLocation] {
-		t.Error("nodeStoreStatus.[testLocation] is : ", *testLocation, nodeStoreStatus.CurrentResourceVerions[*testLocation])
-		t.Error("testCases0.[testLocation]      is : ", *testLocation, testCase0.CurrentResourceVerions[*testLocation])
+	if nodeStoreStatus.CurrentResourceVerions[testLocation] != testCase0.CurrentResourceVerions[testLocation] {
+		t.Error("nodeStoreStatus.[testLocation] is : ", testLocation, nodeStoreStatus.CurrentResourceVerions[testLocation])
+		t.Error("testCases0.[testLocation]      is : ", testLocation, testCase0.CurrentResourceVerions[testLocation])
 	}
 }
 
