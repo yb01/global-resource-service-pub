@@ -2,8 +2,10 @@ package types
 
 import (
 	"fmt"
-	"k8s.io/klog/v2"
 	"strconv"
+	"time"
+
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -97,6 +99,9 @@ type LogicalNode struct {
 	// defined as highend, lowend, medium as an example
 	// TBD for post 630
 	MachineType NodeMachineType
+
+	// LastUpdatedTime defines the time when node status was updated in resource partition
+	LastUpdatedTime time.Time
 }
 
 func (n *LogicalNode) Copy() *LogicalNode {
