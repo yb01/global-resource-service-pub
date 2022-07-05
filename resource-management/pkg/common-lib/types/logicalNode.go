@@ -115,6 +115,7 @@ func (n *LogicalNode) Copy() *LogicalNode {
 		Conditions:           n.Conditions,
 		Reserved:             n.Reserved,
 		MachineType:          n.MachineType,
+		LastUpdatedTime:      n.LastUpdatedTime,
 	}
 }
 
