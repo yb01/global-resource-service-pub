@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.8.0
 	github.com/stretchr/testify v1.7.1
+	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
 	k8s.io/klog/v2 v2.60.1
 )
 
