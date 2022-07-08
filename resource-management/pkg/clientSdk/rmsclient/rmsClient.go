@@ -22,6 +22,7 @@ package rmsclient
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -42,11 +43,17 @@ type Config struct {
 	InitialRequestRegions       []string
 }
 
+// ListOptions contains optional settings for List nodes
+type ListOptions struct {
+	// Limit is equailent to URL query parameter ?limit=500
+	Limit int
+}
+
 // RmsInterface has methods to work with Resource management service resources.
 // below are just 630 related interface definitions
 type RmsInterface interface {
 	Register() (*apiTypes.ClientRegistrationResponse, error)
-	List(string) ([]*types.LogicalNode, types.TransitResourceVersionMap, error)
+	List(string, ListOptions) ([]*types.LogicalNode, types.TransitResourceVersionMap, error)
 	Watch(string, types.TransitResourceVersionMap) (watch.Interface, error)
 }
 
@@ -121,13 +128,13 @@ func (c *rmsClient) Register() (*apiTypes.ClientRegistrationResponse, error) {
 }
 
 // List takes label and field selectors, and returns the list of Nodes that match those selectors.
-func (c *rmsClient) List(clientId string) ([]*types.LogicalNode, types.TransitResourceVersionMap, error) {
+func (c *rmsClient) List(clientId string, opts ListOptions) ([]*types.LogicalNode, types.TransitResourceVersionMap, error) {
 	req := c.restClient.Get()
 	req = req.Resource("resource")
 	req = req.Name(c.Id)
 	req = req.Timeout(c.config.RequestTimeout)
-	req = req.Param("limit", "25000")
-
+	req = req.Param("limit", strconv.Itoa(opts.Limit))
+	
 	respRet, err := req.DoRaw()
 	if err != nil {
 		return nil, nil, err

@@ -34,6 +34,7 @@ func main() {
 
 	testCfg := testConfig{}
 	cfg := rmsclient.Config{}
+	listOpts := rmsclient.ListOptions{}
 	var regions string
 
 	flag.StringVar(&cfg.ServiceUrl, "service_url", "localhost:8080", "Service IP address, if not set, default to localhost")
@@ -45,6 +46,7 @@ func main() {
 	flag.DurationVar(&testCfg.testDuration, "test_duration", 10*time.Minute, "Test duration, measured by number minutes of watch of node changes. default 10 minutes")
 	flag.StringVar(&testCfg.action, "action", "", "action to perform, can be register list or watch, default to register-list-watch")
 	flag.IntVar(&testCfg.repeats, "repeats", 1, "number of repeats of the action, default to 1")
+	flag.IntVar(&listOpts.Limit, "limit", 25000, "limit for list nodes, default to 25000")
 
 	if !flag.Parsed() {
 		klog.InitFlags(nil)
@@ -73,19 +75,19 @@ func main() {
 		clientId := registerClient(client, registerStats)
 		client.Id = clientId
 		for i := 0; i < testCfg.repeats; i++ {
-			_ = listNodes(client, client.Id, store, listStats)
+			_ = listNodes(client, client.Id, store, listStats, listOpts)
 			printTestStats(registerStats, listStats, watchStats)
 		}
 	case watch:
 		clientId := registerClient(client, registerStats)
 		client.Id = clientId
-		crv := listNodes(client, client.Id, store, listStats)
+		crv := listNodes(client, client.Id, store, listStats, listOpts)
 		watchNodes(client, client.Id, crv, store, watchStats)
 		printTestStats(registerStats, listStats, watchStats)
 	default:
 		clientId := registerClient(client, registerStats)
 		client.Id = clientId
-		crv := listNodes(client, client.Id, store, listStats)
+		crv := listNodes(client, client.Id, store, listStats, listOpts)
 		watchNodes(client, client.Id, crv, store, watchStats)
 		printTestStats(registerStats, listStats, watchStats)
 	}
@@ -129,12 +131,12 @@ func registerClient(client rmsclient.RmsInterface, registerStats *stats.Register
 	return registrationResp.ClientId
 }
 
-func listNodes(client rmsclient.RmsInterface, clientId string, store cache.Store, listStats *stats.ListStats) types.TransitResourceVersionMap {
+func listNodes(client rmsclient.RmsInterface, clientId string, store cache.Store, listStats *stats.ListStats, listOpts rmsclient.ListOptions) types.TransitResourceVersionMap {
 	var start, end time.Time
 
 	klog.Infof("List resources from service ...")
 	start = time.Now().UTC()
-	nodeList, crv, err := client.List(clientId)
+	nodeList, crv, err := client.List(clientId, listOpts)
 	end = time.Now().UTC()
 	if err != nil {
 		klog.Errorf("failed list resource from service. error %v", err)
