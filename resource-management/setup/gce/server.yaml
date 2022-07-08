@@ -1,0 +1,40 @@
+#cloud-config
+
+write_files:
+  - path: /etc/systemd/system/server-installation.service
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=Download and install service binaries and configurations
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStartPre=/bin/mkdir -p /home/grs/bin
+      ExecStartPre=/bin/mount --bind /home/grs/bin /home/grs/bin
+      ExecStartPre=/bin/mount -o remount,exec /home/grs/bin
+      # Use --retry-connrefused opt only if it's supported by curl.
+      ExecStartPre=/bin/bash -c 'OPT=""; if curl --help | grep -q -- "--retry-connrefused"; then OPT="--retry-connrefused"; fi; /usr/bin/curl --fail --retry 5 --retry-delay 3 $OPT --silent --show-error -H "X-Google-Metadata-Request: True" -o /home/grs/bin/configure.sh http://metadata.google.internal/computeMetadata/v1/instance/attributes/configure-sh'
+      ExecStartPre=/bin/chmod 544 /home/grs/bin/configure.sh
+      ExecStart=/home/grs/bin/configure.sh
+
+      [Install]
+      WantedBy=grs.target
+
+  - path: /etc/systemd/system/grs.target
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=Global resource service
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+ - systemctl daemon-reload
+ - systemctl enable server-installation.service
+ - systemctl enable grs.target
+ - systemctl start grs.target
