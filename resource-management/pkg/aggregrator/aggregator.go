@@ -10,6 +10,7 @@ import (
 	"k8s.io/klog/v2"
 
 	distributor "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
@@ -176,6 +177,15 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 	err = json.Unmarshal(bodyBytes, &ResponseObject)
 	if err != nil {
 		klog.Errorf("Error from JSON Unmarshal:", err)
+	}
+	if metrics.ResourceManagementMeasurement_Enabled {
+		for i := 0; i < len(ResponseObject.RegionNodeEvents); i++ {
+			for j := 0; j < len(ResponseObject.RegionNodeEvents[i]); j++ {
+				if ResponseObject.RegionNodeEvents[i][j] != nil {
+					ResponseObject.RegionNodeEvents[i][j].SetCheckpoint(metrics.Aggregator_Received)
+				}
+			}
+		}
 	}
 
 	return ResponseObject.RegionNodeEvents, ResponseObject.Length

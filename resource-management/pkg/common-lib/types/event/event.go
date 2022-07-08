@@ -40,8 +40,12 @@ func (e *NodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoin
 		e.checkpoints = make(map[metrics.ResourceManagementCheckpoint]time.Time, 5)
 	}
 	if _, isOK := e.checkpoints[checkpoint]; !isOK {
-		e.checkpoints[checkpoint] = time.Now()
+		e.checkpoints[checkpoint] = time.Now().UTC()
 	} else {
 		klog.Errorf("Checkpoint %v already set for event %s, node id %s, rv %s", checkpoint, e.Type, e.Node.Id, e.Node.ResourceVersion)
 	}
+}
+
+func (e *NodeEvent) GetCheckpoints() map[metrics.ResourceManagementCheckpoint]time.Time {
+	return e.checkpoints
 }

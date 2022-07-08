@@ -12,6 +12,7 @@ import (
 
 	di "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	store "global-resource-service/resource-management/pkg/common-lib/interfaces/store"
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	apiTypes "global-resource-service/resource-management/pkg/service-api/types"
@@ -226,9 +227,12 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 				resp.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+			record.SetCheckpoint(metrics.Serializer_Encoded)
 			if len(watchCh) == 0 {
 				flusher.Flush()
 			}
+			record.SetCheckpoint(metrics.Serializer_Sent)
+			event.AddLatencyMetricsAllCheckpoints(record)
 		}
 	}
 }
