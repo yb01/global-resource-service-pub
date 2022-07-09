@@ -78,7 +78,6 @@ function attach-ipaddress {
 
         ip_index=0
         for name in "${instance_names[@]}"; do
-                echo $name
                 gcloud compute instances delete-access-config \
                 $name \
                 --zone ${ZONE} \
@@ -93,6 +92,32 @@ function attach-ipaddress {
                 --address "${IP_ADDRESS[$ip_index]}"
                 echo "$ip_index,${IP_ADDRESS[$ip_index]}"
                 ip_index=$(($ip_index + 1))
+        done
+}
+
+function ssh-config {
+        local cmd="$1"
+        local machine_name="$2"
+        gcloud compute ssh \
+        "${machine_name}" \
+        --ssh-flag="-o LogLevel=quiet" \
+        --ssh-flag="-o ConnectTimeout=30" \
+        --project "${PROJECT}" \
+        --zone="${ZONE}" \
+        --command "${cmd}" \
+        --quiet
+}
+
+function start-redis {
+        local group_name="$1"
+        echo "Starting redis service"
+        instance_names=()
+        instance_names=($(gcloud compute instance-groups managed list-instances \
+        "${group_name}" --zone "${ZONE}" --project "${PROJECT}" \
+        --format='value(instance)'))
+        cmd="sudo systemctl restart redis-server.service"
+        for name in "${instance_names[@]}"; do
+                ssh-config "${cmd}" "${name}"
         done
 }
 
@@ -130,5 +155,9 @@ if [ ${SERVER_NUM} -gt 0 ]; then
         create-image "${SERVER_IMAGE_NAME}" "${SERVER_SOURCE_DISK}" "${SERVER_SOURCE_DISK_ZONE}"
         create-template "${SERVER_INSTANCE_PREFIX}-template" "${SERVER_SOURCE_INSTANCE}" "${SERVER_SOURCE_DISK}" "${SERVER_IMAGE_NAME}" "${SERVER_SOURCE_DISK_ZONE}"
         create-instance-group "${SERVER_INSTANCE_PREFIX}-instance-group" "${SERVER_INSTANCE_PREFIX}-template" "${SERVER_NUM}"
+        echo "Sleep 60 seconds to wait instance ready ..."
+        sleep 60
+        start-redis "${SERVER_INSTANCE_PREFIX}-instance-group"
 fi
 
+echo "Done. All required resouce has been started!"
