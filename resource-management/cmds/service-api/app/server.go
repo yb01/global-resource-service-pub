@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"global-resource-service/resource-management/pkg/aggregrator"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/service-api/endpoints"
 	"global-resource-service/resource-management/pkg/store/redis"
@@ -16,9 +17,10 @@ import (
 )
 
 type Config struct {
-	ResourceUrls []string
-	MasterIp     string
-	MasterPort   string
+	ResourceUrls              []string
+	MasterIp                  string
+	MasterPort                string
+	EventMetricsDumpFrequency time.Duration
 }
 
 // Run and create new service-api.  This should never exit.
@@ -76,6 +78,17 @@ func Run(c *Config) error {
 	if err != nil {
 		return err
 	}
+
+	// start the event metrics report
+	klog.V(3).Infof("Starting the event metrics reporting routine...")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			time.Sleep(c.EventMetricsDumpFrequency)
+			event.PrintLatencyReport()
+		}
+	}()
 
 	wg.Wait()
 	return nil

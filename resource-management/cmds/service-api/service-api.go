@@ -21,7 +21,8 @@ func main() {
 	flag.StringVar(&c.MasterIp, "master_ip", "localhost", "Service IP address, if not set, default to localhost")
 	flag.StringVar(&c.MasterPort, "master_port", "8080", "Service port, if not set, default to 8080")
 	flag.StringVar(&urls, "resource_urls", "", "Resource urls of the resource manager services in each region")
-
+	flag.DurationVar(&c.EventMetricsDumpFrequency, "metrics_dump_frequency", 5*time.Minute, "Frequency to dump the event metrics, default 5m")
+	
 	if !flag.Parsed() {
 		klog.InitFlags(nil)
 		flag.Parse()
