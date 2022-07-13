@@ -86,7 +86,6 @@ func (a *Aggregator) Run() (err error) {
 
 			klog.V(3).Infof("Starting loop pulling nodes from region: %v", a.urls[i])
 			for {
-				klog.V(9).Infof("Wait for 100 milisecond...")
 				time.Sleep(100 * time.Millisecond)
 
 				// Call the Pull methods
@@ -148,8 +147,6 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 	} else {
 		path = httpPrefix + c.BaseURL + "/resources/subsequentpull"
 	}
-
-	klog.V(9).Infof("CRV : (%v)", crv)
 
 	bytes, _ := json.Marshal(PullDataFromRRM{BatchLength: batchLength, CRV: crv.Copy()})
 	req, err := http.NewRequest(http.MethodGet, path, strings.NewReader((string(bytes))))
