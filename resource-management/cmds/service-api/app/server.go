@@ -6,14 +6,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/mux"
+	"k8s.io/klog/v2"
+
 	"global-resource-service/resource-management/pkg/aggregrator"
+	localMetrics "global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/service-api/endpoints"
 	"global-resource-service/resource-management/pkg/store/redis"
-
-	"github.com/gorilla/mux"
-	"k8s.io/klog/v2"
 )
 
 type Config struct {
@@ -79,16 +80,18 @@ func Run(c *Config) error {
 		return err
 	}
 
-	// start the event metrics report
-	klog.V(3).Infof("Starting the event metrics reporting routine...")
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			time.Sleep(c.EventMetricsDumpFrequency)
-			event.PrintLatencyReport()
-		}
-	}()
+	if localMetrics.ResourceManagementMeasurement_Enabled {
+		// start the event metrics report
+		klog.V(3).Infof("Starting the event metrics reporting routine...")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				time.Sleep(c.EventMetricsDumpFrequency)
+				event.PrintLatencyReport()
+			}
+		}()
+	}
 
 	wg.Wait()
 	return nil

@@ -14,3 +14,7 @@ const (
 )
 
 var ResourceManagementMeasurement_Enabled = true
+
+func SetEnableResourceManagementMeasurement(enabled bool) {
+	ResourceManagementMeasurement_Enabled = enabled
+}
