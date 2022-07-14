@@ -173,9 +173,11 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 				if !ok {
 					break
 				}
+				klog.V(9).Infof("Sending event with node id %v", event.Node.Id)
 				event.SetCheckpoint(metrics.Distributor_Sending)
 				downstreamCh <- event
 				event.SetCheckpoint(metrics.Distributor_Sent)
+				klog.V(9).Infof("Event with node id %v sent", event.Node.Id)
 			}
 		}
 

@@ -220,7 +220,7 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 				return
 			}
 
-			klog.V(9).Infof("Getting event from distributor: %v, %v", *record, *record.Node)
+			klog.V(9).Infof("Getting event from distributor, node Id: %v", record.Node.Id)
 
 			if err := json.NewEncoder(resp).Encode(*record); err != nil {
 				klog.V(3).Infof("encoding record failed. error %v", err)

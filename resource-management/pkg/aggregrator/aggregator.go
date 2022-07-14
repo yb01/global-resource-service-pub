@@ -179,6 +179,7 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 		for i := 0; i < len(ResponseObject.RegionNodeEvents); i++ {
 			for j := 0; j < len(ResponseObject.RegionNodeEvents[i]); j++ {
 				if ResponseObject.RegionNodeEvents[i][j] != nil {
+					ResponseObject.RegionNodeEvents[i][j].CreateCheckPointsMap()
 					ResponseObject.RegionNodeEvents[i][j].SetCheckpoint(metrics.Aggregator_Received)
 				}
 			}

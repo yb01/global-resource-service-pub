@@ -27,8 +27,15 @@ type NodeEvent struct {
 
 func NewNodeEvent(node *types.LogicalNode, eventType EventType) *NodeEvent {
 	return &NodeEvent{
-		Type: eventType,
-		Node: node,
+		Type:        eventType,
+		Node:        node,
+		checkpoints: make(map[metrics.ResourceManagementCheckpoint]time.Time, 5),
+	}
+}
+
+func (e *NodeEvent) CreateCheckPointsMap() {
+	if e.checkpoints == nil {
+		e.checkpoints = make(map[metrics.ResourceManagementCheckpoint]time.Time, 5)
 	}
 }
 
@@ -36,9 +43,7 @@ func (e *NodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoin
 	if !metrics.ResourceManagementMeasurement_Enabled {
 		return
 	}
-	if e.checkpoints == nil {
-		e.checkpoints = make(map[metrics.ResourceManagementCheckpoint]time.Time, 5)
-	}
+
 	if _, isOK := e.checkpoints[checkpoint]; !isOK {
 		e.checkpoints[checkpoint] = time.Now().UTC()
 	} else {
