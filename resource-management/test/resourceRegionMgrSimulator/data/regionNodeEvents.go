@@ -142,7 +142,10 @@ func generateAddedNodeEvents(regionName string, rpNum, nodesPerRP int) simulator
 //
 func makeDataUpdate(changesThreshold int) {
 	// Calculate how many node changes per RP
-	nodeChangesPerRP := changesThreshold / RpNum
+	var nodeChangesPerRP = 1
+	if (changesThreshold >= 2 * RpNum) {
+		nodeChangesPerRP = changesThreshold / RpNum
+	}
 
 	// Make data update for each RP
 	for j := 0; j < RpNum; j++ {
