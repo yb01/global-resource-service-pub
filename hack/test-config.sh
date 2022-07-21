@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # gcloud multiplexing for shared GCE/GKE tests.
-GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")
+GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
 SIM_NUM=${SIM_NUM:-2}
 CLIENT_NUM=${CLIENT_NUM:-4}

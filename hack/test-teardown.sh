@@ -2,11 +2,11 @@
 
 ### Only support gcloud 
 ### Please ensure gcloud is installed before run this script
-GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")
+GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
-source "${GRS_ROOT}/test-config.sh"
+source "${GRS_ROOT}/hack/test-config.sh"
 
-echo "Tear down region simulator and clients... "
+echo "Tear down server, region simulator and clients... "
 
 function delete-image {
         local image_name="$1"
@@ -70,7 +70,7 @@ function delete-machine-image {
 #   main function
 ###############
 
-if [ "${SIM_AUTO_DELETE}" == "true" ]; then
+if [[ "${SIM_AUTO_DELETE}" == "true" && ${SIM_NUM} -gt 0 ]]; then
         echo "Deleting simulator resources"
         IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
         if [ ${#INSTANCE_SIM_ZONE[@]} == 1 ]; then
@@ -90,7 +90,7 @@ if [ "${SIM_AUTO_DELETE}" == "true" ]; then
         fi
 fi
 
-if [ "${CLIENT_AUTO_DELETE}" == "true" ]; then
+if [[ "${CLIENT_AUTO_DELETE}" == "true"  && ${CLIENT_NUM} -gt 0 ]]; then
         echo "Deleting client scheduler resources"
         IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
         if [ ${#INSTANCE_CLIENT_ZONE[@]} == 1 ]; then
@@ -110,7 +110,7 @@ if [ "${CLIENT_AUTO_DELETE}" == "true" ]; then
         fi
 fi
 
-if [ "${SERVER_AUTO_DELETE}" == "true" ]; then
+if [[ "${SERVER_AUTO_DELETE}" == "true"  && ${SERVER_NUM} -gt 0 ]]; then
         echo "Deleting server resources"
         IFS=','; INSTANCE_SERVER_ZONE=($SERVER_ZONE); unset IFS;
         if [ ${#INSTANCE_SERVER_ZONE[@]} == 1 ]; then

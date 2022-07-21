@@ -14,9 +14,9 @@
 ### export CLIENT_ZONE=us-west3-b,us-east4-b,asia-south2-a,australia-southeast1-b,northamerica-northeast1-a,us-west2-c
 ################
 
-GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")
+GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
-source "${GRS_ROOT}/test-config.sh"
+source "${GRS_ROOT}/hack/test-config.sh"
 
 function create-image {
         local image_name="$1"
@@ -109,12 +109,14 @@ function create-instance-group {
                         --project "${PROJECT}" \
                         --quiet 
         fi
-        gcloud compute instance-groups managed create \
+        gcloud beta compute instance-groups managed create \
                 "${group_name}" \
                 --project "${PROJECT}" \
                 --zone "${instance_zone}" \
                 --template "${template_name}" \
                 --size "${instance_num}" \
+                --stateful-internal-ip enabled,auto-delete=on-permanent-instance-deletion \
+                --stateful-external-ip enabled,auto-delete=on-permanent-instance-deletion \
                 --quiet
 }
 
@@ -285,42 +287,51 @@ fi
 echo "Waiting 60 seconds to get all resource started"
 sleep 60
 
-SIM_IPS=""
-if [ ${#INSTANCE_SIM_ZONE[@]} == 1 ]; then
-        SIM_IPS="$(get-mig-ips ${SIM_INSTANCE_PREFIX}-${INSTANCE_SIM_ZONE[0]}-mig ${INSTANCE_SIM_ZONE[0]})"
-else
-        index=0
-        for zone in "${INSTANCE_SIM_ZONE[@]}"; do
-                SIM_IPS+="$(get-instance-ip ${SIM_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
-                index=$((index + 1)) 
-        done
+if [ ${SIM_NUM} -gt 0 ]; then
+        SIM_IPS=""
+        if [ ${#INSTANCE_SIM_ZONE[@]} == 1 ]; then
+                SIM_IPS="$(get-mig-ips ${SIM_INSTANCE_PREFIX}-${INSTANCE_SIM_ZONE[0]}-mig ${INSTANCE_SIM_ZONE[0]})"
+        else
+                index=0
+                for zone in "${INSTANCE_SIM_ZONE[@]}"; do
+                        SIM_IPS+="$(get-instance-ip ${SIM_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
+                        index=$((index + 1)) 
+                done
 
+        fi
+        echo "Simulators started at ip addresss: ${SIM_IPS}"
 fi
-echo "Simulators started at ip addresss: ${SIM_IPS}"
-CLIENT_IPS=""
-if [ ${#INSTANCE_CLIENT_ZONE[@]} == 1 ]; then
-        CLIENT_IPS="$(get-mig-ips ${CLIENT_INSTANCE_PREFIX}-${INSTANCE_CLIENT_ZONE[0]}-mig ${INSTANCE_CLIENT_ZONE[0]})"
-else
-        index=0
-        for zone in "${INSTANCE_CLIENT_ZONE[@]}"; do
-                CLIENT_IPS+="$(get-instance-ip ${CLIENT_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
-                index=$((index + 1)) 
-        done
 
-fi
-echo "Client schedulers started at ip addresss: ${CLIENT_IPS}"
-SERVER_IPS=""
-if [ ${#INSTANCE_SERVER_ZONE[@]} == 1 ]; then
-        start-mig-redis "${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig" "${INSTANCE_SERVER_ZONE[0]}"
-        SERVER_IPS="$(get-mig-ips ${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig ${INSTANCE_SERVER_ZONE[0]})"
-else
-        index=0
-        for zone in "${INSTANCE_SERVER_ZONE[@]}"; do
-                start-instance-redis "${SERVER_INSTANCE_PREFIX}-${zone}-${index}" "${zone}"
-                SERVER_IPS+="$(get-instance-ip ${SERVER_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
-                index=$((index + 1)) 
-        done
+if [ ${CLIENT_NUM} -gt 0 ]; then
+        CLIENT_IPS=""
+        if [ ${#INSTANCE_CLIENT_ZONE[@]} == 1 ]; then
+                CLIENT_IPS="$(get-mig-ips ${CLIENT_INSTANCE_PREFIX}-${INSTANCE_CLIENT_ZONE[0]}-mig ${INSTANCE_CLIENT_ZONE[0]})"
+        else
+                index=0
+                for zone in "${INSTANCE_CLIENT_ZONE[@]}"; do
+                        CLIENT_IPS+="$(get-instance-ip ${CLIENT_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
+                        index=$((index + 1)) 
+                done
 
+        fi
+        echo "Client schedulers started at ip addresss: ${CLIENT_IPS}"
 fi
-echo "Servers started at ip addresss: ${SERVER_IPS}"
+
+if [ ${SERVER_NUM} -gt 0 ]; then
+        SERVER_IPS=""
+        if [ ${#INSTANCE_SERVER_ZONE[@]} == 1 ]; then
+                start-mig-redis "${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig" "${INSTANCE_SERVER_ZONE[0]}"
+                SERVER_IPS="$(get-mig-ips ${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig ${INSTANCE_SERVER_ZONE[0]})"
+        else
+                index=0
+                for zone in "${INSTANCE_SERVER_ZONE[@]}"; do
+                        start-instance-redis "${SERVER_INSTANCE_PREFIX}-${zone}-${index}" "${zone}"
+                        SERVER_IPS+="$(get-instance-ip ${SERVER_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
+                        index=$((index + 1)) 
+                done
+
+        fi
+        echo "Servers started at ip addresss: ${SERVER_IPS}"
+fi
+
 echo "Done to create and start all required resouce"
