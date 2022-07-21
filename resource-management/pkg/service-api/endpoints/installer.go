@@ -216,11 +216,11 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 		case record, ok := <-watchCh:
 			if !ok {
 				// End of results.
-				klog.V(3).Infof("End of results")
+				klog.Infof("End of results")
 				return
 			}
 
-			klog.V(9).Infof("Getting event from distributor, node Id: %v", record.Node.Id)
+			klog.V(6).Infof("Getting event from distributor, node Id: %v", record.Node.Id)
 
 			if err := json.NewEncoder(resp).Encode(*record); err != nil {
 				klog.V(3).Infof("encoding record failed. error %v", err)
@@ -278,7 +278,7 @@ func (i *Installer) handleResponseTrunked(resp http.ResponseWriter, nodes []*typ
 	if responseTrunkSize < chunkSize {
 		responseTrunkSize = chunkSize
 	}
-	klog.V(6).Infof("Serve with chunk size: %v", responseTrunkSize)
+	klog.Infof("Serve with chunk size: %v", responseTrunkSize)
 	var nodesLen = len(nodes)
 	if nodesLen <= responseTrunkSize {
 		listResp := apiTypes.ListNodeResponse{NodeList: nodes, ResourceVersions: crv}

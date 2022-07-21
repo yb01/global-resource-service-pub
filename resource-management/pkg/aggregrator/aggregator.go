@@ -94,26 +94,29 @@ func (a *Aggregator) Run() (err error) {
 				// To simplify the codes, we use one method initPullOrSubsequentPull instead
 				regionNodeEvents, length = a.initPullOrSubsequentPull(c, DefaultBatchLength, crv)
 				if length != 0 {
-					klog.V(6).Infof("Total (%v) region node events are pulled successfully in (%v) RPs", length, len(regionNodeEvents))
+					klog.V(4).Infof("Total (%v) region node events are pulled successfully in (%v) RPs", length, len(regionNodeEvents))
 
 					// Convert 2D array to 1D array
-					var minRecordNodeEvents []*event.NodeEvent
+					minRecordNodeEvents := make([]*event.NodeEvent, 0, length)
 					for j := 0; j < len(regionNodeEvents); j++ {
 						minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
 					}
-					klog.V(9).Infof("Total (%v) mini node events are converted successfully with length (%v)", len(minRecordNodeEvents), length)
+					klog.V(6).Infof("Total (%v) mini node events are converted successfully with length (%v)", len(minRecordNodeEvents), length)
 
-					if len(minRecordNodeEvents) != 0 {
-						// Call ProcessEvents() and get the CRV from distributor as default success
-						// TODO:
-						//    1. Call the ProcessEvents Per RP to unload some cost from the Distributor
-						//       The performance tested in development Mac is not good
-						eventProcess, crv = a.EventProcessor.ProcessEvents(minRecordNodeEvents)
+					// Call ProcessEvents() and get the CRV from distributor as default success
+					// TODO:
+					//    1. Call the ProcessEvents Per RP to unload some cost from the Distributor
+					//       The performance tested in development Mac is not good
+					//    2. Unfortunately we cannot process the events in separated thread since the returned CRV is needed for the next PULL
+					//       so the true pull interval is 100ms + time of ProcessEvent() + time of PULL() + time of converting arrays + logging
+					//       TODO: re-evaluate the pull mode vs push for performance
+					start := time.Now()
+					eventProcess, crv = a.EventProcessor.ProcessEvents(minRecordNodeEvents)
+					end := time.Now()
+					klog.V(6).Infof("Event Processor Processed nodes results : %v. duration: %v", eventProcess, end.Sub(start))
 
-						klog.V(3).Infof("Event Processor Processed nodes : results : %v", eventProcess)
-						if eventProcess {
-							a.postCRV(c, crv)
-						}
+					if eventProcess {
+						a.postCRV(c, crv)
 					}
 				}
 			}
@@ -159,22 +162,38 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		klog.Errorf(err.Error())
-		// Fix the bug - "Aggregator should not exit if the resource region manager is not available"
-		var blankMinRecordNodeEvents [][]*event.NodeEvent
-		return blankMinRecordNodeEvents, 0
+		return nil, 0
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		klog.Errorf(err.Error())
+		return nil, 0
 	}
 
 	var ResponseObject ResponseFromRRM
 	err = json.Unmarshal(bodyBytes, &ResponseObject)
 	if err != nil {
 		klog.Errorf("Error from JSON Unmarshal:", err)
+		return nil, 0
 	}
+
+	// log out node ids for debugging some prolonged node transitions
+	if klog.V(9).Enabled() {
+		for rp, rpNodes := range ResponseObject.RegionNodeEvents {
+			if len(rpNodes) == 0 {
+				continue
+			}
+			buf := make([]string, len(rpNodes))
+			for i, node := range rpNodes {
+				buf[i] = node.Node.Id
+			}
+
+			klog.V(9).Infof("Pulled nodes from RP %v: %v", rp, buf)
+		}
+	}
+
 	if metrics.ResourceManagementMeasurement_Enabled {
 		for i := 0; i < len(ResponseObject.RegionNodeEvents); i++ {
 			for j := 0; j < len(ResponseObject.RegionNodeEvents[i]); j++ {
