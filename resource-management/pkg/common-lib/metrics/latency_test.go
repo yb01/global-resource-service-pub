@@ -85,7 +85,7 @@ func Test_GetLatencyReport(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			start := tt.start
 
-			latency := NewLatencyMetrics(tt.name)
+			latency := NewLatencyMetrics(0)
 			for i := 0; i < tt.count; i++ {
 				latency.AddLatencyMetrics(time.Duration(start) * time.Millisecond)
 				start += tt.gap

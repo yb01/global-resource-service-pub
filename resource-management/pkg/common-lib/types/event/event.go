@@ -1,7 +1,6 @@
 package event
 
 import (
-	"k8s.io/klog/v2"
 	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
@@ -22,20 +21,14 @@ const (
 type NodeEvent struct {
 	Type        EventType
 	Node        *types.LogicalNode
-	checkpoints map[metrics.ResourceManagementCheckpoint]time.Time
+	checkpoints []time.Time
 }
 
 func NewNodeEvent(node *types.LogicalNode, eventType EventType) *NodeEvent {
 	return &NodeEvent{
 		Type:        eventType,
 		Node:        node,
-		checkpoints: make(map[metrics.ResourceManagementCheckpoint]time.Time, 5),
-	}
-}
-
-func (e *NodeEvent) CreateCheckPointsMap() {
-	if e.checkpoints == nil {
-		e.checkpoints = make(map[metrics.ResourceManagementCheckpoint]time.Time, 5)
+		checkpoints: make([]time.Time, metrics.Len_ResourceManagementCheckpoint),
 	}
 }
 
@@ -44,13 +37,12 @@ func (e *NodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoin
 		return
 	}
 
-	if _, isOK := e.checkpoints[checkpoint]; !isOK {
-		e.checkpoints[checkpoint] = time.Now().UTC()
-	} else {
-		klog.Errorf("Checkpoint %v already set for event %s, node id %s, rv %s", checkpoint, e.Type, e.Node.Id, e.Node.ResourceVersion)
+	if e.checkpoints == nil {
+		e.checkpoints = make([]time.Time, metrics.Len_ResourceManagementCheckpoint)
 	}
+	e.checkpoints[checkpoint] = time.Now().UTC()
 }
 
-func (e *NodeEvent) GetCheckpoints() map[metrics.ResourceManagementCheckpoint]time.Time {
+func (e *NodeEvent) GetCheckpoints() []time.Time {
 	return e.checkpoints
 }

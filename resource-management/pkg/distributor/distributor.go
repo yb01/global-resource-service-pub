@@ -61,7 +61,7 @@ func createNodeStore() *storage.NodeStore {
 // TODO: post 630, allocate resources per request for different type of hardware and regions
 func (dis *ResourceDistributor) RegisterClient(client *types.Client) error {
 	clientId := client.ClientId
-	_, err := dis.allocateNodesToClient(clientId, client.Resource.TotalMachines)
+	assignedHostNum, err := dis.allocateNodesToClient(clientId, client.Resource.TotalMachines)
 	if err != nil {
 		klog.Errorf("Error allocate resource for client. Error %v\n", err)
 		return err
@@ -73,27 +73,27 @@ func (dis *ResourceDistributor) RegisterClient(client *types.Client) error {
 		return err
 	}
 
-	klog.Errorf("Registered client id: %s\n", clientId)
+	klog.Infof("Registered client id: %s, requested host # = %d, assigned host # = %d\n", clientId, client.Resource.TotalMachines, assignedHostNum)
 	return nil
 }
 
-func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requestedHostNum int) (bool, error) {
+func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requestedHostNum int) (int, error) {
 	dis.allocateLock.Lock()
 	defer dis.allocateLock.Unlock()
 	if requestedHostNum <= MinimalRequestHostNum {
-		return false, types.Error_HostRequestLessThanMiniaml
+		return 0, types.Error_HostRequestLessThanMiniaml
 	} else if requestedHostNum > dis.defaultNodeStore.GetTotalHostNum() {
-		return false, types.Error_HostRequestExceedLimit
+		return 0, types.Error_HostRequestExceedLimit
 	} else if !dis.defaultNodeStore.CheckFreeCapacity(requestedHostNum) {
-		return false, types.Error_HostRequestExceedCapacity
+		return 0, types.Error_HostRequestExceedCapacity
 	}
 
 	// check client id existence
 	if _, isOK := dis.nodeEventQueueMap[clientId]; isOK {
-		return false, types.Error_ClientIdExisted
+		return 0, types.Error_ClientIdExisted
 	}
 	if _, isOK := dis.clientToStores[clientId]; isOK {
-		return false, types.Error_ClientIdExisted
+		return 0, types.Error_ClientIdExisted
 	}
 
 	// allocate virtual nodes to client
@@ -106,7 +106,7 @@ func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requested
 		}
 	}
 	if len(freeStores) == 0 {
-		return false, errors.New("No available hosts")
+		return 0, errors.New("No available hosts")
 	}
 
 	// Get sorted virtual node stores based on ordering criteria
@@ -123,7 +123,7 @@ func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requested
 		}
 	}
 	if !hostAssignIsOK {
-		return false, errors.New("Not enough hosts")
+		return 0, errors.New("Not enough hosts")
 	}
 
 	// Create event queue for client
@@ -140,7 +140,7 @@ func (dis *ResourceDistributor) allocateNodesToClient(clientId string, requested
 	// persist virtual node assignment
 	dis.persistVirtualNodesAssignment(clientId, selectedStores)
 
-	return true, nil
+	return assignedHostCount, nil
 }
 
 func (dis *ResourceDistributor) addBookmarkEvent(stores []*storage.VirtualNodeStore, eventQueue *cache.NodeEventQueue) {

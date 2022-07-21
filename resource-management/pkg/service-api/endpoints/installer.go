@@ -112,7 +112,7 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 
 	switch req.Method {
 	case http.MethodGet:
-		clientId := getClinetId(req)
+		clientId := getClientId(req)
 		klog.Infof("Handle resource for client: %v", clientId)
 
 		resp.WriteHeader(http.StatusOK)
@@ -142,7 +142,7 @@ func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request)
 	// It's unlikely we can change to other solutions for now. so use POST to test verify the watch logic and flows for now.
 	// TODO: switch to logical record or other means to set the water mark as query parameter
 	case http.MethodPost:
-		clientId := getClinetId(req)
+		clientId := getClientId(req)
 		klog.Infof("Handle resource for client: %v", clientId)
 
 		if req.URL.Query().Get(WatchParameter) == WatchParameterTrue {
@@ -232,9 +232,7 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 				flusher.Flush()
 			}
 			record.SetCheckpoint(metrics.Serializer_Sent)
-			if metrics.ResourceManagementMeasurement_Enabled {
-				event.AddLatencyMetricsAllCheckpoints(record)
-			}
+			event.AddLatencyMetricsAllCheckpoints(record)
 		}
 	}
 }
@@ -245,7 +243,7 @@ func stopWatch(stopCh chan struct{}) {
 }
 
 // get clientId from url path
-func getClinetId(req *http.Request) string {
+func getClientId(req *http.Request) string {
 	// urlpath is fixed: "/resource/clientid"
 	clientId := strings.Split(req.URL.Path, "/")[2]
 	// watch url path "/resource/clientid?watch=true"

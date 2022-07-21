@@ -42,6 +42,13 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			hostPerClient:  500,
 			updateEventNum: 100000,
 		},
+		{
+			name:           "Test 1M nodes with 50 clients each has 15000 , each got 100K update events",
+			nodeNum:        1000000,
+			clientNum:      50,
+			hostPerClient:  15000,
+			updateEventNum: 100000,
+		},
 	}
 
 	for _, tt := range testCases {
@@ -97,7 +104,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 				// check each node event
 				nodeIds := make(map[string]bool)
 				for _, node := range nodes {
-					nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition (node.GeoInfo.ResourcePartition)}
+					nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition(node.GeoInfo.ResourcePartition)}
 					assert.NotNil(t, nodeLoc)
 					assert.True(t, latestRVs[nodeLoc] >= node.GetResourceVersionInt64())
 					if _, isOK := nodeIds[node.Id]; isOK {
@@ -282,7 +289,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 					// check each node event
 					nodeIds := make(map[string]bool)
 					for _, node := range nodes {
-						nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition (node.GeoInfo.ResourcePartition)}
+						nodeLoc := types.RvLocation{Region: location.Region(node.GeoInfo.Region), Partition: location.ResourcePartition(node.GeoInfo.ResourcePartition)}
 						assert.NotNil(t, nodeLoc)
 						assert.True(t, latestRVs[nodeLoc] >= node.GetResourceVersionInt64())
 						if _, isOK := nodeIds[node.Id]; isOK {
@@ -419,11 +426,20 @@ Processing 2000 AddNode events took 4.219236ms.
 Processing 20000 AddNode events took 28.11632ms.
 Processing 200000 AddNode events took 294.131531ms.
 Processing 2000000 AddNode events took 4.040301206s.
+
+. Added checkpoints with array
+Processing 20 AddNode events took 314.825µs.
+Processing 200 AddNode events took 982.61µs.
+Processing 2000 AddNode events took 6.241914ms.
+Processing 20000 AddNode events took 57.767247ms.
+Processing 200000 AddNode events took 583.935804ms.
+Processing 2000000 AddNode events took 6.429718129s.
 */
 func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
+	//metrics.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	// generate add node events
 	for i := 0; i < len(nodeCounts); i++ {
@@ -493,6 +509,14 @@ Processing 2000 AddNode events took 2.68838ms.
 Processing 20000 AddNode events took 18.140626ms.
 Processing 200000 AddNode events took 175.578763ms.
 Processing 2000000 AddNode events took 2.460715575s.
+
+. Added checkpoints with array
+Processing 20 AddNode events took 288.991µs.
+Processing 200 AddNode events took 629.264µs.
+Processing 2000 AddNode events took 3.910318ms.
+Processing 20000 AddNode events took 32.042223ms.
+Processing 200000 AddNode events took 365.70946ms.
+Processing 2000000 AddNode events took 4.189824513s.
 */
 func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 	distributor := setUp()

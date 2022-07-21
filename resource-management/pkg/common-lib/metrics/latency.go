@@ -14,13 +14,13 @@ type LatencyReport struct {
 }
 
 type LatencyMetrics struct {
-	name      string
+	value     int
 	latencies []time.Duration
 }
 
-func NewLatencyMetrics(name string) *LatencyMetrics {
+func NewLatencyMetrics(value int) *LatencyMetrics {
 	return &LatencyMetrics{
-		name:      name,
+		value:     value,
 		latencies: make([]time.Duration, 0),
 	}
 }
