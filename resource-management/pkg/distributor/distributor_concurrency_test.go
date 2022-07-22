@@ -434,6 +434,22 @@ Processing 2000 AddNode events took 6.241914ms.
 Processing 20000 AddNode events took 57.767247ms.
 Processing 200000 AddNode events took 583.935804ms.
 Processing 2000000 AddNode events took 6.429718129s.
+
+. Batch persist nodes - 100 per batch - with checkpoints enabled
+Processing 20 AddNode events took 144.422µs.
+Processing 200 AddNode events took 1.380407ms.
+Processing 2000 AddNode events took 4.123098ms.
+Processing 20000 AddNode events took 40.019265ms.
+Processing 200000 AddNode events took 394.402522ms.
+Processing 2000000 AddNode events took 4.549515804s.
+
+. Batch persist nodes - 100 per batch - with checkpoints disabled
+Processing 20 AddNode events took 98.111µs.
+Processing 200 AddNode events took 1.266727ms.
+Processing 2000 AddNode events took 1.563561ms.
+Processing 20000 AddNode events took 11.765084ms.
+Processing 200000 AddNode events took 165.029239ms.
+Processing 2000000 AddNode events took 1.752964732s.
 */
 func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
 	distributor := setUp()
@@ -517,11 +533,28 @@ Processing 2000 AddNode events took 3.910318ms.
 Processing 20000 AddNode events took 32.042223ms.
 Processing 200000 AddNode events took 365.70946ms.
 Processing 2000000 AddNode events took 4.189824513s.
+
+. Batch persist nodes - 100 per batch - with checkpoints enabled
+Processing 20 AddNode events took 203.159µs.
+Processing 200 AddNode events took 392.641µs.
+Processing 2000 AddNode events took 2.403222ms.
+Processing 20000 AddNode events took 24.039274ms.
+Processing 200000 AddNode events took 253.344984ms.
+Processing 2000000 AddNode events took 2.927105773s.
+
+. Batch persist nodes - 100 per batch - with checkpoints disabled
+Processing 20 AddNode events took 186.784µs.
+Processing 200 AddNode events took 1.342371ms.
+Processing 2000 AddNode events took 1.12844ms.
+Processing 20000 AddNode events took 7.427902ms.
+Processing 200000 AddNode events took 115.241136ms.
+Processing 2000000 AddNode events took 1.175839189s.
 */
 func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
+	//metrics.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	// generate add node events
 	for i := 0; i < len(nodeCounts); i++ {

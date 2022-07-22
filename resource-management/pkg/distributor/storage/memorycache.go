@@ -28,17 +28,19 @@ func (c *DistributorPersistHelper) SetWaitCount(count int) {
 	c.persistNodeWaitGroup.Add(count)
 }
 
-func (c *DistributorPersistHelper) CallDone() {
-	c.persistNodeWaitGroup.Done()
-}
-
-func (c *DistributorPersistHelper) PersistNode(newNode *types.LogicalNode) {
-	go func(persistHelper store.StoreInterface, node *types.LogicalNode, wg *sync.WaitGroup) {
-		defer wg.Done()
+func (c *DistributorPersistHelper) PersistNodes(newNodes []*types.LogicalNode) {
+	go func(persistHelper store.StoreInterface, nodes []*types.LogicalNode, wg *sync.WaitGroup) {
 		retries := 0
+		defer func(numberOfNodes int, wg *sync.WaitGroup) {
+			for i := 0; i < numberOfNodes; i++ {
+				wg.Done()
+			}
+		}(len(nodes), wg)
+
 		for {
-			result := persistHelper.PersistNodes([]*types.LogicalNode{newNode})
+			result := persistHelper.PersistNodes(nodes)
 			if result {
+
 				return
 			} else {
 				// TODO - error processing
@@ -48,7 +50,7 @@ func (c *DistributorPersistHelper) PersistNode(newNode *types.LogicalNode) {
 			}
 			retries++
 		}
-	}(c.persistHelper, newNode, c.persistNodeWaitGroup)
+	}(c.persistHelper, newNodes, c.persistNodeWaitGroup)
 }
 
 // TODO - timeout

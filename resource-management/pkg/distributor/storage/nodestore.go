@@ -16,6 +16,7 @@ import (
 
 const (
 	VirtualStoreInitSize = 100
+	BatchPersistSize     = 100
 )
 
 type VirtualNodeStore struct {
@@ -249,12 +250,25 @@ func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
 
 func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) (bool, types.TransitResourceVersionMap) {
 	persistHelper.SetWaitCount(len(nodeEvents))
+
+	eventsToPersist := make([]*types.LogicalNode, BatchPersistSize)
+	i := 0
 	for _, e := range nodeEvents {
 		if e == nil {
-			persistHelper.CallDone()
+			persistHelper.persistNodeWaitGroup.Done()
 			continue
 		}
-		ns.processNodeEvent(e, persistHelper)
+		ns.processNodeEvent(e)
+		eventsToPersist[i] = e.GetNodeEvent().Node
+		i++
+		if i == BatchPersistSize {
+			persistHelper.PersistNodes(eventsToPersist)
+			i = 0
+		}
+	}
+	if i > 0 {
+		remainingEventsToPersist := eventsToPersist[0:i]
+		persistHelper.PersistNodes(remainingEventsToPersist)
 	}
 
 	// persist disk
@@ -267,15 +281,16 @@ func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, pers
 	return true, ns.GetCurrentResourceVersions()
 }
 
-func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) bool {
+func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent) bool {
 	switch nodeEvent.GetEventType() {
 	case event.Added:
 		ns.CreateNode(nodeEvent)
-		persistHelper.PersistNode(nodeEvent.GetNodeEvent().Node)
 	case event.Modified:
 		ns.UpdateNode(nodeEvent)
-		persistHelper.PersistNode(nodeEvent.GetNodeEvent().Node)
 	default:
+		// TODO - action needs to take when non acceptable events happened
+		klog.Warningf("Invalid event type [%v] for node %v, location %v, rv %v",
+			nodeEvent.GetNodeEvent(), nodeEvent.GetId(), nodeEvent.GetRvLocation(), nodeEvent.GetResourceVersion())
 		return false
 	}
 

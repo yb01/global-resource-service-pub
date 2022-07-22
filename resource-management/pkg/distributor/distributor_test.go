@@ -144,11 +144,28 @@ Processing 1000 AddNode events took 2.270763ms.
 Processing 10000 AddNode events took 14.54155ms.
 Processing 100000 AddNode events took 136.840846ms.
 Processing 1000000 AddNode events took 2.077560132s.
+
+. Batch persist nodes - 100 per batch - with checkpoints enabled
+Processing 10 AddNode events took 118.371µs.
+Processing 100 AddNode events took 253.852µs.
+Processing 1000 AddNode events took 2.126007ms.
+Processing 10000 AddNode events took 19.244113ms.
+Processing 100000 AddNode events took 197.925013ms.
+Processing 1000000 AddNode events took 2.268421774s.
+
+. Batch persist nodes - 100 per batch - with checkpoints disabled
+Processing 10 AddNode events took 88.647µs.
+Processing 100 AddNode events took 90.774µs.
+Processing 1000 AddNode events took 1.924601ms.
+Processing 10000 AddNode events took 7.019417ms.
+Processing 100000 AddNode events took 62.484907ms.
+Processing 1000000 AddNode events took 867.098414ms.
 */
 func TestAddNodes(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
+	//metrics.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	previousNodeCount := 0
 	for i := 0; i < len(nodeCounts); i++ {
