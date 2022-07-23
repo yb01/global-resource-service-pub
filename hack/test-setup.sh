@@ -17,6 +17,7 @@
 GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
 source "${GRS_ROOT}/hack/test-config.sh"
+source "${GRS_ROOT}/hack/lib/util.sh"
 
 function create-image {
         local image_name="$1"
@@ -118,20 +119,6 @@ function create-instance-group {
                 --stateful-internal-ip enabled,auto-delete=on-permanent-instance-deletion \
                 --stateful-external-ip enabled,auto-delete=on-permanent-instance-deletion \
                 --quiet
-}
-
-function ssh-config {
-        local cmd="$1"
-        local machine_name="$2"
-        local zone="$3"
-        gcloud compute ssh \
-        "${machine_name}" \
-        --ssh-flag="-o LogLevel=quiet" \
-        --ssh-flag="-o ConnectTimeout=30" \
-        --project "${PROJECT}" \
-        --zone="${zone}" \
-        --command "${cmd}" \
-        --quiet
 }
 
 function start-instance-redis {
