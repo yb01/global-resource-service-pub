@@ -4,7 +4,7 @@
 GRS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
 SIM_NUM=${SIM_NUM:-2}
-CLIENT_NUM=${CLIENT_NUM:-4}
+CLIENT_NUM=${CLIENT_NUM:-2}
 SERVER_NUM=${SERVER_NUM:-1}
 ZONE=${GRS_GCE_ZONE:-"us-central1-a"}
 REGION=${ZONE%-*}
@@ -57,3 +57,27 @@ CLIENT_LOG_DIR=${CLIENT_LOG_DIR:-"${DIR_ROOT}/logs"}
 DES_LOG_DIR=${DES_LOG_DIR:-"${DIR_ROOT}/grs/logs/${SERVER_NUM}se${SIM_NUM}si${CLIENT_NUM}cl"}
 DES_LOG_INSTANCE=${DES_LOG_INSTANCE:-"sonyadev4"}
 DES_LOG_INSTANCE_ZONE=${DES_LOG_INSTANCE_ZONE:-"us-central1-a"}
+
+
+#rune2e parameter
+SIM_LOG_LEVEL=${SIM_LOG_LEVEL:-3}
+SERVER_LOG_LEVEL=${SERVER_LOG_LEVEL:-3}
+CLIENT_LOG_LEVEL=${CLIENT_LOG_LEVEL:-3}
+SIM_CODE_ROOT=${SIM_CODE_ROOT:-"/home/sonyali/go/src/global-resource-service"}
+SERVER_CODE_ROOT=${SERVER_CODE_ROOT:-"/home/sonyali/go/src/global-resource-service"}
+CLIENT_CODE_ROOT=${CLIENT_CODE_ROOT:-"/home/sonyali/go/src/global-resource-service"}
+SERVICE_EXTRA_ARGS=${SERVICE_EXTRA_ARGS:-}
+SIM_EXTRA_ARGS=${SIM_EXTRA_ARGS:-}
+CLIENT_EXTRA_ARGS=${CLIENT_EXTRA_ARGS:-}
+SIM_PORT=${SIM_PORT:-"9119"}
+
+SIM_REGIONS=${SIM_REGIONS:-"Beijing,Shanghai"}
+SIM_RP_NUM=${SIM_RP_NUM:-"10"}
+NODES_PER_RP=${NODES_PER_RP:-"20000"}
+
+SCHEDULER_REQUEST_MACHINE=${SCHEDULER_REQUEST_MACHINE:-"25000"}
+SCHEDULER_REQUEST_LIMIT=${SCHEDULER_REQUEST_LIMIT:-"26000"}
+SCHEDULER_NUM=${SCHEDULER_NUM:-"16"}
+
+####if true, all service will start automaticly including resource management service, simulator, scheduler
+AUTORUN_E2E=${AUTORUN_E2E:-true}

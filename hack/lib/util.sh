@@ -9,7 +9,7 @@ function ssh-config {
         --ssh-flag="-o LogLevel=quiet" \
         --ssh-flag="-o ConnectTimeout=30" \
         --project "${PROJECT}" \
-        --zone="${zone}" \
+        --zone "${zone}" \
         --command "${cmd}" \
-        --quiet
+        --quiet &
 }

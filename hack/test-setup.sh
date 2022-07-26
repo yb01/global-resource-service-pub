@@ -167,6 +167,38 @@ function get-mig-ips {
         echo "${mig_ips}"
 }
 
+function get-mig-urls {
+        local group_name="$1"
+        local zone="$2"
+
+        instance_names=()
+        instance_names=($(gcloud compute instance-groups managed list-instances \
+        "${group_name}" --zone "${zone}" --project "${PROJECT}" \
+        --format='value(instance)'))
+
+        mig_urls=""
+        for name in "${instance_names[@]}"; do
+                mig_urls+="$(get-instance-ip ${name} ${zone}):${SIM_PORT},"
+        done
+        echo "${mig_urls}"
+}
+
+function get-mig-names {
+        local group_name="$1"
+        local zone="$2"
+
+        instance_names=()
+        instance_names=($(gcloud compute instance-groups managed list-instances \
+        "${group_name}" --zone "${zone}" --project "${PROJECT}" \
+        --format='value(instance)'))
+
+        mig_names=""
+        for name in "${instance_names[@]}"; do
+                mig_names+="${name},"
+        done
+        echo "${mig_names}"
+}
+
 ###############
 #   main function
 ###############
@@ -274,19 +306,26 @@ fi
 echo "Waiting 60 seconds to get all resource started"
 sleep 60
 
+RESOURCE_URLS=""
+MASTER_IP=""
+SERVICE_URL=""
+SERVER_ZONE=""
 if [ ${SIM_NUM} -gt 0 ]; then
         SIM_IPS=""
+        RESOURCE_URLS=""
         if [ ${#INSTANCE_SIM_ZONE[@]} == 1 ]; then
                 SIM_IPS="$(get-mig-ips ${SIM_INSTANCE_PREFIX}-${INSTANCE_SIM_ZONE[0]}-mig ${INSTANCE_SIM_ZONE[0]})"
+                RESOURCE_URLS="$(get-mig-urls ${SIM_INSTANCE_PREFIX}-${INSTANCE_SIM_ZONE[0]}-mig ${INSTANCE_SIM_ZONE[0]})"
         else
                 index=0
                 for zone in "${INSTANCE_SIM_ZONE[@]}"; do
                         SIM_IPS+="$(get-instance-ip ${SIM_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
+                        RESOURCE_URLS+="$(get-instance-ip ${SIM_INSTANCE_PREFIX}-${zone}-${index} ${zone}):${SIM_PORT},"
                         index=$((index + 1)) 
                 done
 
         fi
-        echo "Simulators started at ip addresss: ${SIM_IPS}"
+        echo "Simulators started at ip addresss: ${SIM_IPS%,}"
 fi
 
 if [ ${CLIENT_NUM} -gt 0 ]; then
@@ -301,24 +340,44 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                 done
 
         fi
-        echo "Client schedulers started at ip addresss: ${CLIENT_IPS}"
+        echo "Client schedulers started at ip addresss: ${CLIENT_IPS%,}"
 fi
 
 if [ ${SERVER_NUM} -gt 0 ]; then
         SERVER_IPS=""
+        SERVER_NAMES=""
+        SERVICE_ZONE="${INSTANCE_SERVER_ZONE[0]}"
         if [ ${#INSTANCE_SERVER_ZONE[@]} == 1 ]; then
                 start-mig-redis "${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig" "${INSTANCE_SERVER_ZONE[0]}"
                 SERVER_IPS="$(get-mig-ips ${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig ${INSTANCE_SERVER_ZONE[0]})"
+                SERVER_NAMES="$(get-mig-names ${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig ${INSTANCE_SERVER_ZONE[0]})"
         else
                 index=0
                 for zone in "${INSTANCE_SERVER_ZONE[@]}"; do
                         start-instance-redis "${SERVER_INSTANCE_PREFIX}-${zone}-${index}" "${zone}"
                         SERVER_IPS+="$(get-instance-ip ${SERVER_INSTANCE_PREFIX}-${zone}-${index} ${zone}),"
+                        SERVER_NAMES+="${SERVER_INSTANCE_PREFIX}-${zone}-${index},"
                         index=$((index + 1)) 
                 done
 
         fi
-        echo "Servers started at ip addresss: ${SERVER_IPS}"
+        echo "Servers started at ip addresss: ${SERVER_IPS%,}"
 fi
 
+####Most cloud doesn't support binding to public IP, so using machine name to listen and bind service for now
+export MASTER_IP="${SERVER_NAMES%%,*}"
+export SERVICE_URL="${SERVER_IPS%%,*}:8080"
+export RESOURCE_URLS="${RESOURCE_URLS%,}"
+export SERVICE_ZONE                     # the zone on resosurce management serevice instance
+
 echo "Done to create and start all required resouce"
+
+if [ "${AUTORUN_E2E}" == "true" ]; then
+        #Starting e2e testing
+        "${GRS_ROOT}/hack/test-rune2e.sh"
+else
+        echo "You can start service using args: --master_ip=${MASTER_IP} --resource_urls=${RESOURCE_URLS}"
+        echo "You can start scheduler using args: --service_url=${SERVICE_URL}"
+fi
+
+

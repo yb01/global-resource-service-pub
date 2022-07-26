@@ -82,9 +82,10 @@ if [[ "${SIM_AUTO_DELETE}" == "true" && ${SIM_NUM} -gt 0 ]]; then
                         delete-vm-instance "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
                         index=$(($index + 1)) 
                 done
-                sleep 60
         fi
         if [ "${SIMIMAGE_AUTO_DELETE}" == "true" ]; then
+                #waiting 60 seconds to get all instances deleted before delete images
+                sleep 60
                 delete-image "${SIM_IMAGE_NAME}"
                 delete-machine-image  "${SIM_IMAGE_NAME}"
         fi
@@ -102,9 +103,10 @@ if [[ "${CLIENT_AUTO_DELETE}" == "true"  && ${CLIENT_NUM} -gt 0 ]]; then
                         delete-vm-instance "${CLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
                         index=$(($index + 1)) 
                 done
-                sleep 60
         fi
         if [ "${CLIENTIMAGE_AUTO_DELETE}" == "true" ]; then
+                #waiting 60 seconds to get all instances deleted before delete images
+                sleep 60
                 delete-image "${CLIENT_IMAGE_NAME}"
                 delete-machine-image  "${CLIENT_IMAGE_NAME}"
         fi
@@ -122,9 +124,10 @@ if [[ "${SERVER_AUTO_DELETE}" == "true"  && ${SERVER_NUM} -gt 0 ]]; then
                         delete-vm-instance "${SERVER_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
                         index=$(($index + 1)) 
                 done
-                sleep 60
         fi
         if [ "${SERVERIMAGE_AUTO_DELETE}" == "true" ]; then
+                #waiting 60 seconds to get all instances deleted before delete images
+                sleep 60
                 delete-image "${SERVER_IMAGE_NAME}"
                 delete-machine-image  "${SERVER_IMAGE_NAME}"
         fi
