@@ -184,7 +184,9 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 					klog.Infof("End of results")
 					return
 				}
-				logIfProlonged(&record, time.Now().UTC(), watchStats)
+				watchDelay := time.Now().UTC().Sub(record.Node.LastUpdatedTime)
+				addWatchLatency(watchDelay, watchStats)
+				logIfProlonged(&record, watchDelay, watchStats)
 				switch record.Type {
 				case event.Added:
 					store.Add(*record.Node)
@@ -209,10 +211,18 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 	return
 }
 
-func logIfProlonged(record *event.NodeEvent, t time.Time, ws *stats.WatchStats) {
-	d := t.Sub(record.Node.LastUpdatedTime)
-	if d > stats.LongWatchThreshold {
-		klog.Infof("Prolonged watch node from server: %v with time (%v)", record.Node.Id, d)
+func addWatchLatency(delay time.Duration, ws *stats.WatchStats) {
+	// Current watch latency is only summarized once. Remove lock/unlock for latency record per event to minimize performance impact
+	// See PR 111.
+	// If later we need to call ws.GetSummary() multiple times, lock needs to be added back.
+	//ws.WatchDelayLock.Lock()
+	ws.WatchDelayPerEvent.AddLatencyMetrics(delay)
+	//ws.WatchDelayLock.Unlock()
+}
+
+func logIfProlonged(record *event.NodeEvent, delay time.Duration, ws *stats.WatchStats) {
+	if delay > stats.LongWatchThreshold {
+		klog.Warningf("Prolonged watch node from server: %v with time (%v)", record.Node.Id, delay)
 		ws.NumberOfProlongedItems++
 	}
 }

@@ -1,15 +1,17 @@
 package stats
 
 import (
+	"sync"
 	"time"
 
 	"k8s.io/klog/v2"
 
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 )
 
 const (
-	LongWatchThreshold = time.Duration(1000 * time.Millisecond)
+	LongWatchThreshold = time.Second
 	RegionMapInitCap   = 10
 	RpMapInitCap       = 20
 )
@@ -23,7 +25,7 @@ func NewRegisterClientStats() *RegisterClientStats {
 }
 
 func (rs *RegisterClientStats) PrintStats() {
-	klog.Infof("RegisterClientDuration: %v", rs.RegisterClientDuration)
+	klog.Infof("[Metrics][Register]RegisterClientDuration: %v", rs.RegisterClientDuration)
 }
 
 type ListStats struct {
@@ -36,7 +38,7 @@ func NewListStats() *ListStats {
 }
 
 func (ls *ListStats) PrintStats() {
-	klog.Infof("ListDuration: %v. Number of nodes listed: %v", ls.ListDuration, ls.NumberOfNodesListed)
+	klog.Infof("[Metrics][List]ListDuration: %v. Number of nodes listed: %v", ls.ListDuration, ls.NumberOfNodesListed)
 }
 
 type WatchStats struct {
@@ -46,18 +48,22 @@ type WatchStats struct {
 	NumberOfUpdatedNodes     int
 	NumberOfDeletedNodes     int
 	NumberOfProlongedWatches int
+	WatchDelayPerEvent       *metrics.LatencyMetrics
+	WatchDelayLock           sync.RWMutex
 }
 
 func NewWatchStats() *WatchStats {
-	return &WatchStats{}
+	return &WatchStats{WatchDelayPerEvent: metrics.NewLatencyMetrics(0)} // only one data point
 }
 
 func (ws *WatchStats) PrintStats() {
-	klog.Infof("Watch session last: %v", ws.WatchDuration)
-	klog.Infof("Number of nodes Added: %v", ws.NumberOfAddedNodes)
-	klog.Infof("Number of nodes Updated: %v", ws.NumberOfUpdatedNodes)
-	klog.Infof("Number of nodes Deleted: %v", ws.NumberOfDeletedNodes)
-	klog.Infof("Number of nodes watch prolonged than %v: %v", LongWatchThreshold, ws.NumberOfProlongedItems)
+	klog.Infof("[Metrics][Watch]Watch session last: %v. Number of nodes Added :%v, Updated: %v, Deleted: %v. watch prolonged than %v: %v",
+		ws.WatchDuration, ws.NumberOfAddedNodes, ws.NumberOfUpdatedNodes, ws.NumberOfDeletedNodes, LongWatchThreshold, ws.NumberOfProlongedItems)
+	ws.WatchDelayLock.RLock()
+	watchDelaySummary := ws.WatchDelayPerEvent.GetSummary()
+	ws.WatchDelayLock.RUnlock()
+	klog.Infof("[Metrics][Watch] perc50 %v, perc90 %v, perc99 %v. Total count %v",
+		watchDelaySummary.P50, watchDelaySummary.P90, watchDelaySummary.P99, watchDelaySummary.TotalCount)
 }
 
 type groupByRp map[types.ResourcePartitionName]int
