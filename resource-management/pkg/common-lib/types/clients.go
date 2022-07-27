@@ -2,7 +2,7 @@ package types
 
 const (
 	// Max and Min request per client request during registration or update resources
-	MaxTotalMachinesPerRequest = 25000
+	MaxTotalMachinesPerRequest = 50000
 	MinTotalMachinesPerRequest = 1000
 )
 
