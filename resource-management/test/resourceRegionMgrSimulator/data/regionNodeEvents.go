@@ -52,8 +52,10 @@ func MakeDataUpdate(data_pattern string, wait_time_for_make_rp_down int) {
 				// Generate one RP down event during specfied interval
 				time.Sleep(time.Duration(wait_time_for_make_rp_down) * time.Minute)
 				makeOneRPDown()
-
 				klog.V(3).Info("Generating one RP down event is completed")
+
+				time.Sleep(120 * time.Minute)
+				klog.V(6).Info("Simulate to delay 2 hours")
 			}
 		case "Daily":
 			for {
