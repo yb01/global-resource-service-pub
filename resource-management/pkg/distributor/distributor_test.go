@@ -86,6 +86,20 @@ func TestDistributorInit(t *testing.T) {
 }
 
 func measureProcessEvent(t *testing.T, dis *ResourceDistributor, eventType string, events []*event.NodeEvent, previousNodeCount int) {
+	// get all node ids
+	nodeIds := make(map[string]bool, len(events))
+	eventCount := 0
+	for i := 0; i < len(events); i++ {
+		if events[i] != nil {
+			nodeIds[events[i].Node.Id] = true
+			eventCount++
+		}
+	}
+	assert.Equal(t, len(events), eventCount)
+	assert.Equal(t, len(events), len(nodeIds))
+
+	dis.persistHelper.SetTestNodeIdMatch(true)
+	dis.persistHelper.InitNodeIdCache()
 	start := time.Now()
 	result, rvMap := dis.ProcessEvents(events)
 	duration := time.Since(start)
@@ -102,6 +116,10 @@ func measureProcessEvent(t *testing.T, dis *ResourceDistributor, eventType strin
 		assert.NotNil(t, vNodeStore.GetLocation())
 	}
 	assert.Equal(t, len(events)+previousNodeCount, hostCount, "Expected host number %d does not match actual host number %d", len(events), hostCount)
+
+	// match node ids in events and fake storage
+	assert.Equal(t, len(nodeIds), dis.persistHelper.GetNodeIdCount())
+	dis.persistHelper.SetTestNodeIdMatch(false)
 }
 
 /*

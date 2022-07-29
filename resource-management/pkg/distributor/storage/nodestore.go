@@ -264,6 +264,7 @@ func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, pers
 		if i == BatchPersistSize {
 			persistHelper.PersistNodes(eventsToPersist)
 			i = 0
+			eventsToPersist = make([]*types.LogicalNode, BatchPersistSize)
 		}
 	}
 	if i > 0 {

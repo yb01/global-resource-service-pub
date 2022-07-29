@@ -23,14 +23,14 @@ type Goredis struct {
 // TODO: with configured parameters for the store
 func NewRedisClient() *Goredis {
 	client := redis.NewClient(&redis.Options{
-		Addr:		"localhost:6379",
-		PoolSize:	1000,
-		PoolTimeout:	2 * time.Minute,
-		IdleTimeout:	10 * time.Minute,
-		ReadTimeout:	2 * time.Minute,
-		WriteTimeout:	1 * time.Minute,
-		Password:	"", //no password set
-		DB:		0,  // use default DB
+		Addr:         "localhost:6379",
+		PoolSize:     1000,
+		PoolTimeout:  2 * time.Minute,
+		IdleTimeout:  10 * time.Minute,
+		ReadTimeout:  2 * time.Minute,
+		WriteTimeout: 1 * time.Minute,
+		Password:     "", //no password set
+		DB:           0,  // use default DB
 	})
 
 	ctx := context.Background()
@@ -288,4 +288,17 @@ func (gr *Goredis) UpdateClient(clientId string, client *types.Client) error {
 
 func (gr *Goredis) GetClients() ([]*types.Client, error) {
 	return nil, fmt.Errorf("not implemented")
+}
+
+func (gr *Goredis) InitNodeIdCache() {
+	klog.Errorf("InitNodeIdCache not implemented")
+}
+
+func (gr *Goredis) GetNodeIdCount() int {
+	klog.Errorf("GetNodeIdCount not implemented")
+	return -1
+}
+
+func (gr *Goredis) SetTestNodeIdMatch(isMatch bool) {
+	klog.Errorf("SetTestNodeIdMatch not implemented")
 }

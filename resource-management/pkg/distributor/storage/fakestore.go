@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"k8s.io/klog/v2"
+	"sync"
 	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
@@ -13,11 +14,35 @@ import (
 const PersistDelayDefault = 20 * time.Nanosecond
 
 type FakeStorageInterface struct {
-	PersistDelayInNS int
+	PersistDelayInNS  int
+	NodeIds           map[string]bool
+	nodeIdCacheLock   sync.RWMutex
+	isTestNodeIdMatch bool
+}
+
+func (fs *FakeStorageInterface) InitNodeIdCache() {
+	fs.NodeIds = make(map[string]bool)
+}
+
+func (fs *FakeStorageInterface) GetNodeIdCount() int {
+	return len(fs.NodeIds)
+}
+
+func (fs *FakeStorageInterface) SetTestNodeIdMatch(isMatch bool) {
+	fs.isTestNodeIdMatch = isMatch
 }
 
 func (fs *FakeStorageInterface) PersistNodes(nodesToPersist []*types.LogicalNode) bool {
 	fs.simulateDelay(len(nodesToPersist))
+
+	klog.Infof("TestNodeIdMatch = %v", fs.isTestNodeIdMatch)
+	if fs.isTestNodeIdMatch {
+		fs.nodeIdCacheLock.Lock()
+		for i := 0; i < len(nodesToPersist); i++ {
+			fs.NodeIds[nodesToPersist[i].Id] = true
+		}
+		fs.nodeIdCacheLock.Unlock()
+	}
 	return true
 }
 
