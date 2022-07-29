@@ -44,7 +44,7 @@ function start-simulator {
         args+=" --rp_num=${rp_num}"
         args+=" --nodes_per_rp=${nodes_per_rp}"
         args+=" --master_port=${sim_port}"
-        if [ ${log_level} != "" ]; then
+        if [ "${log_level}" != "" ]; then
                 args+=" -v=${log_level}"
         fi
         args+=" ${extra_args}"
@@ -92,6 +92,8 @@ function start-scheduler {
 IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
 IFS=','; SIM_REGION_LIST=($SIM_REGIONS); unset IFS;
+IFS=','; SIM_DOWN_TIME_LIST=($SIM_WAIT_DOWN_TIME); unset IFS;
+
 
 ###TODO
 ###using go run to start all component for now
@@ -119,13 +121,23 @@ if [ ${SIM_NUM} -gt 0 ]; then
 
                         index=0
                         for name in "${instance_names[@]}"; do
-                                start-simulator "${name}" "${SIM_REGION_LIST[$index]}" "${SIM_RP_NUM}" "${NODES_PER_RP}" "${SIM_PORT}" "${INSTANCE_SIM_ZONE[0]}" "${SIM_LOG_LEVEL}" "${SIM_EXTRA_ARGS}"
+                                extra_args="${SIM_EXTRA_ARGS}"
+                                extra_args+=" --data_pattern=${SIM_DATA_PATTERN}"
+                                if [[ "${SIM_DATA_PATTERN}" == "Outage" &&  "${SIM_DOWN_TIME_LIST[index]}" != "" ]]; then
+                                        extra_args+=" --wait_time_for_make_rp_down=${SIM_DOWN_TIME_LIST[index]}"
+                                fi
+                                start-simulator "${name}" "${SIM_REGION_LIST[$index]}" "${SIM_RP_NUM}" "${NODES_PER_RP}" "${SIM_PORT}" "${INSTANCE_SIM_ZONE[0]}" "${SIM_LOG_LEVEL}" "${extra_args}"
                                 index=$(($index + 1))
                         done
                 else
                         index=0
                         for zone in "${INSTANCE_SIM_ZONE[@]}"; do
-                                start-simulator "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${SIM_REGION_LIST[$index]}" "${SIM_RP_NUM}" "${NODES_PER_RP}" "${SIM_PORT}" "${zone}" "${SIM_LOG_LEVEL}" "${SIM_EXTRA_ARGS}"
+                                extra_args="${SIM_EXTRA_ARGS}"
+                                extra_args+=" --data_pattern=${SIM_DATA_PATTERN}"
+                                if [[ "${SIM_DATA_PATTERN}" == "Outage" &&  "${SIM_DOWN_TIME_LIST[index]}" != "" ]]; then
+                                        extra_args+=" --wait_time_for_make_rp_down=${SIM_DOWN_TIME_LIST[index]}"
+                                fi
+                                start-simulator "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${SIM_REGION_LIST[$index]}" "${SIM_RP_NUM}" "${NODES_PER_RP}" "${SIM_PORT}" "${zone}" "${SIM_LOG_LEVEL}" "${extra_args}"
                                 index=$(($index + 1)) 
                         done
 
