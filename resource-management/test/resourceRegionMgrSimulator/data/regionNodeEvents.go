@@ -26,9 +26,10 @@ var snapshotNodeListEvents simulatorTypes.RegionNodeEvents
 var RegionId, RpNum, NodesPerRP int
 
 // The constants are for repeatly generate new modified events
-const at2thMin5k = 5000
-const at5thMin25k = 25000
-const at7thMin1k = 1000
+// Outage pattern - one RP down
+
+// Daily Patttern - 10 modified changes per minute
+const atEachMin10 = 10
 
 // Initialize two events list
 // RegionNodeEventsList - for initpull
@@ -43,27 +44,30 @@ func Init(regionName string, rpNum, nodesPerRP int) {
 // Generate region node update event changes to
 // add them into RegionNodeEventsList
 //
-func MakeDataUpdate() {
-	go func() {
-		for {
-			time.Sleep(100 * time.Millisecond)
+func MakeDataUpdate(data_pattern string, wait_time_for_make_rp_down int) {
+	go func(data_pattern string, wait_time_for_make_rp_down int) {
+		switch data_pattern {
+		case "Outage":
+			for {
+				// Generate one RP down event during specfied interval
+				time.Sleep(time.Duration(wait_time_for_make_rp_down) * time.Minute)
+				makeOneRPDown()
 
-			// At 2th minute mark, generate 5k modified and added node events
-			time.Sleep(2 * time.Minute)
-			makeDataUpdate(at2thMin5k)
-			klog.V(3).Info("At 2th minute mark, generating 5k modified and added node events is completed")
+				klog.V(3).Info("Generating one RP down event is completed")
+			}
+		case "Daily":
+			for {
+				// At each minute mark, generate 10 modified node events
+				time.Sleep(1 * time.Minute)
+				makeDataUpdate(atEachMin10)
 
-			// At 5th time mark, generate 25k modified node events
-			time.Sleep(3 * time.Minute)
-			makeDataUpdate(at5thMin25k)
-			klog.V(3).Info("At 5th time mark, generating 25k modified node events is completed")
-
-			// At 7th time mark, generate 1k modified events
-			time.Sleep(2 * time.Minute)
-			makeDataUpdate(at7thMin1k)
-			klog.V(3).Info("At 7th time mark, generating 1k modified events is completed")
+				klog.V(3).Info("At each minute mark, generating 10 modified and added node events is completed")
+			}
+		default:
+			klog.V(3).Infof("Current Simulator Data Pattern (%v) is supported", data_pattern)
+			return
 		}
-	}()
+	}(data_pattern, wait_time_for_make_rp_down)
 }
 
 ///////////////////////////////////////////////
@@ -138,12 +142,47 @@ func generateAddedNodeEvents(regionName string, rpNum, nodesPerRP int) simulator
 	return eventsAdd
 }
 
+//This function simulates one random RP down
+func makeOneRPDown() {
+	selectedRP := int(rand.Intn(RpNum))
+	klog.V(3).Infof("Generating all node down events in selected RP (%v) is starting", selectedRP)
+
+	eventsPerRP := RegionNodeEventsList[selectedRP]
+
+	// Search the nodes in the RP to get the highestRV
+	var highestRVForRP uint64 = 0
+	length := len(eventsPerRP)
+	for k := 0; k < length; k++ {
+		currentResourceVersion := eventsPerRP[k].Node.GetResourceVersionInt64()
+		if highestRVForRP < currentResourceVersion {
+			highestRVForRP = currentResourceVersion
+		}
+	}
+
+	// Make the modified changes for all nodes of selected RP
+	rvToGenerateRPs := highestRVForRP + 1
+	for i := 0; i < NodesPerRP; i++ {
+
+		// reset the version of node with the current rvToGenerateRPs
+		node := eventsPerRP[i].Node
+		node.ResourceVersion = strconv.FormatUint(rvToGenerateRPs, 10)
+
+		// record the time to change resource version in resource partition
+		node.LastUpdatedTime = time.Now().UTC()
+
+		newEvent := event.NewNodeEvent(node, event.Modified)
+		RegionNodeEventsList[selectedRP][i] = newEvent
+
+		rvToGenerateRPs++
+	}
+}
+
 // This function is used to create region node modified event by go routine
 //
 func makeDataUpdate(changesThreshold int) {
 	// Calculate how many node changes per RP
 	var nodeChangesPerRP = 1
-	if (changesThreshold >= 2 * RpNum) {
+	if changesThreshold >= 2*RpNum {
 		nodeChangesPerRP = changesThreshold / RpNum
 	}
 
