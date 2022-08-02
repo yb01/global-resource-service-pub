@@ -56,8 +56,8 @@ function copy-logs {
 IFS=','; INSTANCE_SERVER_ZONE=($SERVER_ZONE); unset IFS;
 IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
-COLLECTDATE="$(date +"%m%d%y-%H%M%S")"
-DESTINATION="${DES_LOG_DIR}/${COLLECTDATE}"
+export COLLECTDATE="$(date +"%m%d%y-%H%M%S")"
+export DESTINATION="${DES_LOG_DIR}/${COLLECTDATE}"
 if [ ${SERVER_NUM} -gt 0 ]; then
         echo "Collecting logs from ${#INSTANCE_SERVER_ZONE[@]} server machines: "
         if [ ${#INSTANCE_SERVER_ZONE[@]} == 1 ]; then
@@ -100,6 +100,7 @@ if [ ${SIM_NUM} -gt 0 ]; then
         fi
 fi
 
+"${GRS_ROOT}/hack/test-loganalysis.sh"
 echo "Copying logs to destination instance."
 copy-logs "${DES_LOG_INSTANCE}" "${DES_LOG_INSTANCE_ZONE}" "${DESTINATION}" "${DES_LOG_DIR}"
 echo "Removing local copy from ${DESTINATION}"
