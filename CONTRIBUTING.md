@@ -58,7 +58,7 @@ then the robot will assign the issue to you and your name will present at `Assig
 While we encourage everyone to contribute code, it is also appreciated when someone reports an issue.
 Issues should be filed under the appropriate CentaurusInfra sub-repository.
 
-*Example:* An globle-resource-service issue should be opened to [Global-Resource-Service](https://github.com/CentaurusInfra/global-resource-service). 
+*Example:* A global-resource-service issue should be opened to [Global-Resource-Service](https://github.com/CentaurusInfra/global-resource-service). 
 
 Please follow the prompted submission guidelines while opening an issue.
 
