@@ -147,12 +147,14 @@ function update-copyright() {
                 if [[ $repo_file = *.go ]] || [[ $repo_file = *.proto ]]; then
                     $SED_CMD -i "1 i ${GRS_COPYRIGHT_LINE_NEW_GO}" $repo_file
                 else
-                    bash_after="\#\!\/usr\/bin"
-                    cat $repo_file | grep "$bash_after" > /dev/null 2>&1
-                    if [ $? -eq 0 ]; then
-                        $SED_CMD -i "/${bash_after}/a ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
-                    else
-                        $SED_CMD -i "1 i  ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
+                    if [[ $repo_file = *.sh ]]; then
+                        bash_after="\#\!\/usr\/bin"
+                        cat $repo_file | grep "$bash_after" > /dev/null 2>&1
+                        if [ $? -eq 0 ]; then
+                            $SED_CMD -i "/${bash_after}/a ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
+                        else
+                            $SED_CMD -i "1 i  ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
+                        fi
                     fi
                 fi
             fi
@@ -162,12 +164,14 @@ function update-copyright() {
         if [[ $repo_file = *.go ]] || [[ $repo_file = *.proto ]]; then
             $SED_CMD -i "1 i ${GRS_COPYRIGHT_LINE_NEW_GO}" $repo_file
         else
-            bash_after="\#\!\/usr\/bin"
-            cat $repo_file | grep "$bash_after" > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                $SED_CMD -i "/${bash_after}/a ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
-            else
-                $SED_CMD -i "1 i  ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
+            if [[ $repo_file = *.sh ]]; then
+                bash_after="\#\!\/usr\/bin"
+                cat $repo_file | grep "$bash_after" > /dev/null 2>&1
+                if [ $? -eq 0 ]; then
+                    $SED_CMD -i "/${bash_after}/a ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
+                else
+                    $SED_CMD -i "1 i  ${GRS_COPYRIGHT_LINE_NEW_OTHER}" $repo_file
+                fi
             fi
         fi
     fi
