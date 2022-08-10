@@ -33,7 +33,7 @@ Please refer to the [setup-grs-test instruction](docs/setup-guide/setup-grs-test
 
 ## Contribute to the GRS project
 
-Please refer to the [CONTRIBUTING guideline](./CONTRIUTING.md) for details and guidelines on how to contribute to the GRS project.
+Please refer to the [CONTRIBUTING guideline](./CONTRIBUTING.md) for details and guidelines on how to contribute to the GRS project.
 
 ## Community Meetings 
 
