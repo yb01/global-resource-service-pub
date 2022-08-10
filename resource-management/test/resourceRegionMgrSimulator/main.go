@@ -46,6 +46,20 @@ func main() {
 		flag.Parse()
 	}
 
+	// Input parameter error handling for c.RpNum and c.NodesPerRP
+	// Fix bug #104
+	klog.Info("")
+	if c.RpNum < 1 {
+		klog.Errorf("Error: Region resource manager simulator config / rp number per region:  (%v) is less than 1", c.RpNum)
+		os.Exit(1)
+	}
+
+	if c.NodesPerRP < 1 {
+		klog.Errorf("Error: Region resource manager simulator config / node number per rp:  (%v) is less than 1", c.NodesPerRP)
+		os.Exit(1)
+	}
+	klog.Info("")
+
 	// Keep a more frequent flush frequency as 1 second
 	klog.StartFlushDaemon(time.Second * 1)
 
