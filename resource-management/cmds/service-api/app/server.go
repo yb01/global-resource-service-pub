@@ -19,6 +19,7 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"sync"
 	"time"
 
@@ -51,7 +52,15 @@ func Run(c *Config) error {
 
 	r := mux.NewRouter().StrictSlash(true)
 
+	// Setup pprof handlers.
+	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
 	// TODO: reuse k8s mux wrapper, pathrecorder.go for simplify this handler by each path
+
 	r.HandleFunc(endpoints.ListWatchResourcePath, installer.ResourceHandler)
 	r.HandleFunc(endpoints.UpdateResourcePath, installer.ResourceHandler)
 	r.HandleFunc(endpoints.ReduceResourcePath, installer.ResourceHandler)
