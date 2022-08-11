@@ -116,10 +116,15 @@ if [ ${SIM_NUM} -gt 0 ]; then
 fi
 
 "${GRS_ROOT}/hack/test-loganalysis.sh"
-echo "Copying logs to destination instance."
-copy-logs "${DES_LOG_INSTANCE}" "${DES_LOG_INSTANCE_ZONE}" "${DESTINATION}" "${DES_LOG_DIR}"
-echo "Removing local copy from ${DESTINATION}"
-sudo rm -r "${DESTINATION}"
+if [ "${LOCAL_LOG_ONLY}" == "true" ]; then
+        echo "All logs copied to local dev machine:${DESTINATION}"
+else
+        echo "Copying logs to destination instance."
+        copy-logs "${DES_LOG_INSTANCE}" "${DES_LOG_INSTANCE_ZONE}" "${DESTINATION}" "${DES_LOG_DIR}"
+        echo "All logs copied to ${DES_LOG_INSTANCE}:${DESTINATION}"
+        echo "Removing local copy from ${DESTINATION}"
+        sudo rm -r "${DESTINATION}"
+fi
 
 
 

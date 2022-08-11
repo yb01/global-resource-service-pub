@@ -105,35 +105,57 @@ echo "" >> ./csv/${csv_name}
 
 
 echo "Collecting service test summary to csv"
-
 for name in $( ls | grep server);do
-
-  grep "\[Metrics\]\[AGG_RECEIVED\]" ${name} >> ./csv/${csv_name}
+  echo "${name}">> ./csv/${csv_name}
+  echo "Metrics Item","perc50","perc90","perc99","Total count">> ./csv/${csv_name}
+  metrics_item="[Metrics][AGG_RECEIVED]"
+  grep_line=$(grep "\[Metrics\]\[AGG_RECEIVED\]" $name | tail -1)
+  perc50=$(echo $grep_line | sed "s/.*perc50 //; s/, perc90.*//")
+  perc90=$(echo $grep_line | sed "s/.*perc90 //; s/, perc99.*//")
+  perc99=$(echo $grep_line | sed "s/.*perc99 //; s/\. Total.*//")
+  total_count=$(echo $grep_line | sed "s/.*Total count //")
+  echo "${metrics_item}","${perc50}","${perc90}","${perc99}","${total_count}">> ./csv/${csv_name}
   
-  ###adding empty line to csv
-  echo "" >> ./csv/${csv_name}
-  echo "" >> ./csv/${csv_name}
-  grep "\[Metrics\]\[DIS_RECEIVED\]" ${name} >> ./csv/${csv_name}
+  metrics_item="[Metrics][DIS_RECEIVED]"
+  grep_line=$(grep "\[Metrics\]\[DIS_RECEIVED\]" $name | tail -1)
+  perc50=$(echo $grep_line | sed "s/.*perc50 //; s/, perc90.*//")
+  perc90=$(echo $grep_line | sed "s/.*perc90 //; s/, perc99.*//")
+  perc99=$(echo $grep_line | sed "s/.*perc99 //; s/\. Total.*//")
+  total_count=$(echo $grep_line | sed "s/.*Total count //")
+  echo "${metrics_item}","${perc50}","${perc90}","${perc99}","${total_count}">> ./csv/${csv_name}
   
-  ###adding empty line to csv
-  echo "" >> ./csv/${csv_name}
-  echo "" >> ./csv/${csv_name}
-  grep "\[Metrics\]\[DIS_SENDING\]" ${name} >> ./csv/${csv_name}
+  metrics_item="[Metrics][DIS_SENDING]"
+  grep_line=$(grep "\[Metrics\]\[DIS_SENDING\]" $name | tail -1)
+  perc50=$(echo $grep_line | sed "s/.*perc50 //; s/, perc90.*//")
+  perc90=$(echo $grep_line | sed "s/.*perc90 //; s/, perc99.*//")
+  perc99=$(echo $grep_line | sed "s/.*perc99 //; s/\. Total.*//")
+  total_count=$(echo $grep_line | sed "s/.*Total count //")
+  echo "${metrics_item}","${perc50}","${perc90}","${perc99}","${total_count}">> ./csv/${csv_name}
 
-  ###adding empty line to csv
-  echo "" >> ./csv/${csv_name}
-  echo "" >> ./csv/${csv_name}
-  grep "\[Metrics\]\[DIS_SENT\]" ${name} >> ./csv/${csv_name}
+  metrics_item="[Metrics][DIS_SENT]"
+  grep_line=$(grep "\[Metrics\]\[DIS_SENT\]" $name | tail -1)
+  perc50=$(echo $grep_line | sed "s/.*perc50 //; s/, perc90.*//")
+  perc90=$(echo $grep_line | sed "s/.*perc90 //; s/, perc99.*//")
+  perc99=$(echo $grep_line | sed "s/.*perc99 //; s/\. Total.*//")
+  total_count=$(echo $grep_line | sed "s/.*Total count //")
+  echo "${metrics_item}","${perc50}","${perc90}","${perc99}","${total_count}">> ./csv/${csv_name}
 
-  ###adding empty line to csv
-  echo "" >> ./csv/${csv_name}
-  echo "" >> ./csv/${csv_name}
-  grep "\[Metrics\]\[SER_ENCODED\]" ${name} >> ./csv/${csv_name}
+  metrics_item="[Metrics][SER_ENCODED]"
+  grep_line=$(grep "\[Metrics\]\[SER_ENCODED\]" $name | tail -1)
+  perc50=$(echo $grep_line | sed "s/.*perc50 //; s/, perc90.*//")
+  perc90=$(echo $grep_line | sed "s/.*perc90 //; s/, perc99.*//")
+  perc99=$(echo $grep_line | sed "s/.*perc99 //; s/\. Total.*//")
+  total_count=$(echo $grep_line | sed "s/.*Total count //")
+  echo "${metrics_item}","${perc50}","${perc90}","${perc99}","${total_count}">> ./csv/${csv_name}
 
-  ###adding empty line to csv
-  echo "" >> ./csv/${csv_name}
-  echo "" >> ./csv/${csv_name}
-  grep "\[Metrics\]\[SER_SENT\]" ${name} >> ./csv/${csv_name}
+  metrics_item="[Metrics][SER_SENT]"
+  grep_line=$(grep "\[Metrics\]\[SER_SENT\]" $name | tail -1)
+  perc50=$(echo $grep_line | sed "s/.*perc50 //; s/, perc90.*//")
+  perc90=$(echo $grep_line | sed "s/.*perc90 //; s/, perc99.*//")
+  perc99=$(echo $grep_line | sed "s/.*perc99 //; s/\. Total.*//")
+  total_count=$(echo $grep_line | sed "s/.*Total count //")
+  echo "${metrics_item}","${perc50}","${perc90}","${perc99}","${total_count}">> ./csv/${csv_name}
+
 done
 
-echo "Please check generated csv report under ./csv/${csv_name}"
+echo "Please check generated csv report under ${DESTINATION}/csv/${csv_name}"
