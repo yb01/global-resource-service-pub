@@ -174,7 +174,7 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                         --format='value(instance)'))
 
                         index=0
-                        service_num=$((${SCHEDULER_NUM} / ${CLIENT_NUM} + 1))
+                        service_num=$(((${SCHEDULER_NUM} + 1) / ${CLIENT_NUM}))
                         for name in "${instance_names[@]}"; do
                                 if [ $index == $((${CLIENT_NUM} - 1)) ]; then
                                         done_num=$((${service_num} * ${index} ))
@@ -185,7 +185,7 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                         done
                 else
                         index=0
-                        service_num=$((${SCHEDULER_NUM} / ${CLIENT_NUM} + 1))
+                        service_num=$(((${SCHEDULER_NUM} + 1) / ${CLIENT_NUM}))
                         for zone in "${INSTANCE_CLIENT_ZONE[@]}"; do
                                 if [ $index == $((${CLIENT_NUM} - 1)) ]; then
                                         done_num=$((${service_num} * ${index} ))
