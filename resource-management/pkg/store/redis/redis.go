@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -50,6 +51,11 @@ func NewRedisClient() *Goredis {
 	})
 
 	ctx := context.Background()
+
+	if err := client.FlushAll(ctx).Err(); err != nil {
+		klog.Errorf("Flush all dbs in error : (%v)", err)
+		os.Exit(1)
+	}
 
 	return &Goredis{
 		client: client,
