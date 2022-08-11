@@ -19,10 +19,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"strings"
 	"time"
+
+	"k8s.io/klog/v2"
 
 	"global-resource-service/resource-management/cmds/service-api/app"
 	localMetrics "global-resource-service/resource-management/pkg/common-lib/metrics"
@@ -52,8 +53,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Trim any leading or trailing "," seperators
+	// Fix bug #103
+	urls = strings.TrimLeft(urls, ",")
+	urls = strings.TrimRight(urls, ",")
+
 	localMetrics.SetEnableResourceManagementMeasurement(metricsEnabled)
 	c.ResourceUrls = strings.Split(urls, ",")
+
+	// Check whether c.ResourceUrls contains invaild urls
+	for _, url := range c.ResourceUrls {
+		if url == "" {
+			klog.Errorf("Error: resource url is missing or wrong input when input --resource_urls")
+			os.Exit(1)
+		}
+	}
 
 	// keep a more frequent flush frequency as 1 second
 	klog.StartFlushDaemon(time.Second * 1)
