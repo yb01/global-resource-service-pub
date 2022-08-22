@@ -28,7 +28,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis/v9"
 )
 
 type Goredis struct {
@@ -43,7 +43,6 @@ func NewRedisClient() *Goredis {
 		Addr:         "localhost:6379",
 		PoolSize:     1000,
 		PoolTimeout:  2 * time.Minute,
-		IdleTimeout:  10 * time.Minute,
 		ReadTimeout:  2 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 		Password:     "", //no password set
