@@ -52,7 +52,7 @@ const (
 	MinimalRequestHostNum = 50
 )
 
-var virutalStoreNumPerResourcePartition = 200 // 10K per resource partition, 50 hosts per virtual node store
+var virutalStoreNumPerResourcePartition = 1000 // 50K per resource partition, 50 hosts per virtual node store
 
 func GetResourceDistributor() *ResourceDistributor {
 	once.Do(func() {

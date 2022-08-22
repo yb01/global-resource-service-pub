@@ -40,7 +40,7 @@ var defaultLocBeijing_RP1 = location.NewLocation(location.Beijing, location.Reso
 var defaultRegion = location.Beijing
 var defaultPartition = location.ResourcePartition1
 
-const defaultVirtualStoreNumPerRP = 200 // 10K per resource partition, 50 hosts per virtual node store
+const defaultVirtualStoreNumPerRP = 1000 // 50K per resource partition, 50 hosts per virtual node store
 
 var fakeStorage = &storage.FakeStorageInterface{
 	PersistDelayInNS: 20,

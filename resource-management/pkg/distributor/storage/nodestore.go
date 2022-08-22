@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	VirtualStoreInitSize = 100
+	VirtualStoreInitSize = 0
 	BatchPersistSize     = 100
 )
 
