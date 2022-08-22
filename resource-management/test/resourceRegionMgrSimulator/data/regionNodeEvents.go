@@ -36,9 +36,11 @@ import (
 // RegionNodeEventsList      - for initpull
 // SnapshotNodeListEvents    - for subsequent pull and
 //                                 post CRV to discard all old node events
+var RegionNodeList simulatorTypes.RegionNodes
 var RegionNodeEventsList simulatorTypes.RegionNodeEvents
+var RegionNodeUpdateEventList []*[]*event.NodeEvent
+var CurrentRVs types.TransitResourceVersionMap
 
-var snapshotNodeListEvents simulatorTypes.RegionNodeEvents
 var RegionId, RpNum, NodesPerRP int
 
 // The constants are for repeatly generate new modified events
@@ -51,10 +53,12 @@ const atEachMin10 = 10
 // RegionNodeEventsList - for initpull
 //
 func Init(regionName string, rpNum, nodesPerRP int) {
-	RegionNodeEventsList = generateAddedNodeEvents(regionName, rpNum, nodesPerRP)
+	RegionNodeEventsList, RegionNodeList, CurrentRVs = generateAddedNodeEvents(regionName, rpNum, nodesPerRP)
 	RegionId = int(location.GetRegionFromRegionName(regionName))
 	RpNum = rpNum
 	NodesPerRP = nodesPerRP
+
+	RegionNodeUpdateEventList = make([]*[]*event.NodeEvent, rpNum)
 }
 
 // Generate region node update event changes to
@@ -105,26 +109,34 @@ func GetRegionNodeAddedEvents(batchLength uint64) (simulatorTypes.RegionNodeEven
 // TO DO: paginate support
 //
 func GetRegionNodeModifiedEventsCRV(rvs types.TransitResourceVersionMap) (simulatorTypes.RegionNodeEvents, uint64) {
-	snapshotNodeListEvents = RegionNodeEventsList
 	pulledNodeListEvents := make(simulatorTypes.RegionNodeEvents, RpNum)
+	region := RegionId
 
 	var count uint64 = 0
 	for j := 0; j < RpNum; j++ {
-		pulledNodeListEventsPerRP := make([]*event.NodeEvent, NodesPerRP)
-		indexPerRP := 0
-		for i := 0; i < NodesPerRP; i++ {
-			region := snapshotNodeListEvents[j][i].Node.GeoInfo.Region
-			rp := snapshotNodeListEvents[j][i].Node.GeoInfo.ResourcePartition
-			loc := types.RvLocation{Region: location.Region(region), Partition: location.ResourcePartition(rp)}
+		loc := types.RvLocation{Region: location.Region(region), Partition: location.ResourcePartition(j)}
+		requestedRV := rvs[loc]
 
-			if snapshotNodeListEvents[j][i].Node.GetResourceVersionInt64() > rvs[loc] {
+		eventsForRP := RegionNodeUpdateEventList[j]
+		if eventsForRP == nil {
+			continue
+		}
+
+		pulledNodeListEventsPerRP := make([]*event.NodeEvent, 0)
+		indexPerRP := 0
+		for i := 0; i < len(*eventsForRP); i++ {
+			nodeRV := (*eventsForRP)[i].Node.GetResourceVersionInt64()
+			if nodeRV > requestedRV {
 				count += 1
-				pulledNodeListEventsPerRP[indexPerRP] = snapshotNodeListEvents[j][i]
+				pulledNodeListEventsPerRP = append(pulledNodeListEventsPerRP, (*eventsForRP)[i])
 				indexPerRP += 1
 			}
 		}
 
-		pulledNodeListEvents[j] = pulledNodeListEventsPerRP[:indexPerRP]
+		pulledNodeListEvents[j] = pulledNodeListEventsPerRP
+
+		// clean up event cache
+		RegionNodeUpdateEventList[j] = nil
 	}
 
 	klog.V(9).Infof("Total (%v) Modified events are to be pulled", count)
@@ -137,27 +149,35 @@ func GetRegionNodeModifiedEventsCRV(rvs types.TransitResourceVersionMap) (simula
 
 // This function is used to initialize the region node added event
 //
-func generateAddedNodeEvents(regionName string, rpNum, nodesPerRP int) simulatorTypes.RegionNodeEvents {
+func generateAddedNodeEvents(regionName string, rpNum, nodesPerRP int) (simulatorTypes.RegionNodeEvents, simulatorTypes.RegionNodes, types.TransitResourceVersionMap) {
 	regionId := location.GetRegionFromRegionName(regionName)
 	eventsAdd := make(simulatorTypes.RegionNodeEvents, rpNum)
+	nodesAdd := make(simulatorTypes.RegionNodes, rpNum)
+	cvs := make(types.TransitResourceVersionMap)
 
 	for j := 0; j < rpNum; j++ {
 		rpName := location.ResourcePartitions[j]
 		loc := location.NewLocation(regionId, rpName)
+		rvLoc := types.RvLocation{
+			Region:    regionId,
+			Partition: rpName,
+		}
 
 		// Initialize the resource version starting from 0 for each RP
 		var rvToGenerateRPs = 0
 		eventsAdd[j] = make([]*event.NodeEvent, nodesPerRP)
+		nodesAdd[j] = make([]*types.LogicalNode, nodesPerRP)
 		for i := 0; i < nodesPerRP; i++ {
 			rvToGenerateRPs += 1
 
-			node := createRandomNode(rvToGenerateRPs, loc)
-			nodeEvent := event.NewNodeEvent(node, event.Added)
+			nodesAdd[j][i] = createRandomNode(rvToGenerateRPs, loc)
+			nodeEvent := event.NewNodeEvent(nodesAdd[j][i], event.Added)
 			eventsAdd[j][i] = nodeEvent
 		}
 
+		cvs[rvLoc] = uint64(rvToGenerateRPs)
 	}
-	return eventsAdd
+	return eventsAdd, nodesAdd, cvs
 }
 
 //This function simulates one random RP down
@@ -206,42 +226,41 @@ func makeDataUpdate(changesThreshold int) {
 
 	// Make data update for each RP
 	for j := 0; j < RpNum; j++ {
-		eventsPerRP := RegionNodeEventsList[j]
-
-		// Search the nodes in the RP to get the highestRV
-		var highestRVForRP uint64 = 0
-		length := len(eventsPerRP)
-		for k := 0; k < length; k++ {
-			currentResourceVersion := eventsPerRP[k].Node.GetResourceVersionInt64()
-			if highestRVForRP < currentResourceVersion {
-				highestRVForRP = currentResourceVersion
-			}
+		// get the highestRV
+		rvLoc := types.RvLocation{
+			Region:    location.Region(RegionId),
+			Partition: location.ResourcePartition(j),
 		}
+		highestRVForRP := CurrentRVs[rvLoc]
 
 		// Pick up 'nodeChangesPerRP' nodes and make changes and assign the node RV to highestRV + 1
 		count := 0
 		rvToGenerateRPs := highestRVForRP + 1
+		nodeChangeEvents := make([]*event.NodeEvent, 0)
+		if RegionNodeUpdateEventList[j] != nil && len(*RegionNodeUpdateEventList[j]) > 0 {
+			nodeChangeEvents = *RegionNodeUpdateEventList[j]
+		}
 		for count < nodeChangesPerRP {
 			// Randonly create data update per RP node events list
-			i := int(rand.Intn(length))
-			node := eventsPerRP[i].Node
+			i := rand.Intn(NodesPerRP)
+			node := RegionNodeList[j][i]
 
 			// special case: Consider 5000 changes per RP for 500 nodes per RP
 			// each node has 10 changes within this cycle
-			currentResourceVersion := node.GetResourceVersionInt64()
-			if currentResourceVersion < rvToGenerateRPs {
-				node.ResourceVersion = strconv.FormatUint(rvToGenerateRPs, 10)
-			} else {
-				node.ResourceVersion = strconv.FormatUint(currentResourceVersion+1, 10)
-			}
+			node.ResourceVersion = strconv.FormatUint(rvToGenerateRPs, 10)
 			// record the time to change resource version in resource partition
 			node.LastUpdatedTime = time.Now().UTC()
 
 			newEvent := event.NewNodeEvent(node, event.Modified)
-			RegionNodeEventsList[j][i] = newEvent
+			nodeChangeEvents = append(nodeChangeEvents, newEvent)
 
 			count++
+			rvToGenerateRPs++
 		}
+		if nodeChangesPerRP > 0 {
+			CurrentRVs[rvLoc] = rvToGenerateRPs - 1
+		}
+		RegionNodeUpdateEventList[j] = &nodeChangeEvents
 	}
 
 	klog.V(6).Infof("Actually total (%v) new modified events are created.", changesThreshold)
