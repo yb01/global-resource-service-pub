@@ -102,7 +102,8 @@ func (a *Aggregator) Run() (err error) {
 
 			klog.V(3).Infof("Starting loop pulling nodes from region: %v", a.urls[i])
 			for {
-				time.Sleep(100 * time.Millisecond)
+				// For performance increasing, change interval from 100ms to 10ms
+				time.Sleep(10 * time.Millisecond)
 
 				// Call the Pull methods
 				// when composite RV is nil, the method initPull is called;
