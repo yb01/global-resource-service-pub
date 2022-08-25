@@ -28,6 +28,8 @@ const (
 	ErrMsg_FailedToProcessBookmarkEvent = "Failed to process bookmark events"
 
 	ErrMsg_EndOfEventQueue = "Reach the end of event queue"
+
+	ErrMsg_ObjectNotFound = "Object not found"
 )
 
 var Error_HostRequestExceedLimit = errors.New(ErrMsg_HostRequestExceedLimit)
@@ -39,3 +41,5 @@ var Error_ClientIdExisted = errors.New(ErrMsg_ClientIdExisted)
 var Error_FailedToProcessBookmarkEvent = errors.New(ErrMsg_FailedToProcessBookmarkEvent)
 
 var Error_EndOfEventQueue = errors.New(ErrMsg_EndOfEventQueue)
+
+var Error_ObjectNotFound = errors.New(ErrMsg_ObjectNotFound)

@@ -248,20 +248,33 @@ func (ns *NodeStore) generateVirtualNodeStores(vNodeNumPerRP int) {
 }
 
 func (ns *NodeStore) CreateNode(nodeEvent *node.ManagedNodeEvent) {
-	hashValue, ringId := ns.getNodeHash(nodeEvent)
-	isNewNode := ns.addNodeToRing(hashValue, ringId, nodeEvent)
+	isNewNode := ns.addNodeToRing(nodeEvent)
 	if !isNewNode {
-		ns.updateNodeInRing(hashValue, ringId, nodeEvent)
+		ns.updateNodeInRing(nodeEvent)
 	}
 }
 
 func (ns *NodeStore) UpdateNode(nodeEvent *node.ManagedNodeEvent) {
-	hashValue, ringId := ns.getNodeHash(nodeEvent)
-	ns.updateNodeInRing(hashValue, ringId, nodeEvent)
+	ns.updateNodeInRing(nodeEvent)
 }
 
 // TODO
 func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
+}
+
+func (ns NodeStore) GetNode(region location.Region, resourcePartition location.ResourcePartition, nodeId string) (*types.LogicalNode, error) {
+	n := &types.LogicalNode{Id: nodeId}
+	ne := event.NewNodeEvent(n, event.Bookmark)
+
+	loc := location.NewLocation(location.Region(region), location.ResourcePartition((resourcePartition)))
+	mgmtNE := node.NewManagedNodeEvent(ne, loc)
+
+	hashValue, _, vNodeStore := ns.getVirtualNodeStore(mgmtNE)
+	if oldNode, isOK := vNodeStore.nodeEventByHash[hashValue]; isOK {
+		return oldNode.CopyNode(), nil
+	} else {
+		return nil, types.Error_ObjectNotFound
+	}
 }
 
 func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, persistHelper *DistributorPersistHelper) (bool, types.TransitResourceVersionMap) {
@@ -345,9 +358,14 @@ func (ns *NodeStore) getNodeHash(node *node.ManagedNodeEvent) (float64, int) {
 	return lower + ringValue*(upper-lower), 0
 }
 
-func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *node.ManagedNodeEvent) (isNewNode bool) {
+func (ns *NodeStore) getVirtualNodeStore(node *node.ManagedNodeEvent) (float64, int, *VirtualNodeStore) {
+	hashValue, ringId := ns.getNodeHash(node)
 	virtualNodeIndex := int(math.Floor(hashValue / ns.granularOfRing))
-	vNodeStore := (*ns.vNodeStores)[virtualNodeIndex]
+	return hashValue, ringId, (*ns.vNodeStores)[virtualNodeIndex]
+}
+
+func (ns *NodeStore) addNodeToRing(nodeEvent *node.ManagedNodeEvent) (isNewNode bool) {
+	hashValue, _, vNodeStore := ns.getVirtualNodeStore(nodeEvent)
 	// add event to event queue
 	// During list snapshot, eventQueue will be locked first and virtual node stores will be locked later
 	// Keep the locking sequence here to prevent deadlock
@@ -375,9 +393,8 @@ func (ns *NodeStore) addNodeToRing(hashValue float64, ringId int, nodeEvent *nod
 	return true
 }
 
-func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *node.ManagedNodeEvent) {
-	virtualNodeIndex := int(math.Floor(hashValue / ns.granularOfRing))
-	vNodeStore := (*ns.vNodeStores)[virtualNodeIndex]
+func (ns *NodeStore) updateNodeInRing(nodeEvent *node.ManagedNodeEvent) {
+	hashValue, _, vNodeStore := ns.getVirtualNodeStore(nodeEvent)
 	// add event to event queue
 	// During list snapshot, eventQueue will be locked first and virtual node stores will be locked later
 	// Keep the locking sequence here to prevent deadlock
@@ -406,7 +423,7 @@ func (ns *NodeStore) updateNodeInRing(hashValue float64, ringId int, nodeEvent *
 	} else {
 		// ?? - report error or not?
 		vNodeStore.mu.Unlock()
-		ns.addNodeToRing(hashValue, ringId, nodeEvent)
+		ns.addNodeToRing(nodeEvent)
 	}
 }
 

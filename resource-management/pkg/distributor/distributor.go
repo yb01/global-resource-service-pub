@@ -304,3 +304,7 @@ func (dis *ResourceDistributor) persistVirtualNodesAssignment(clientId string, a
 	}
 	return result
 }
+
+func (dis *ResourceDistributor) GetNodeStatus(region location.Region, resourcePartition location.ResourcePartition, nodeId string) (*types.LogicalNode, error) {
+	return dis.defaultNodeStore.GetNode(region, resourcePartition, nodeId)
+}

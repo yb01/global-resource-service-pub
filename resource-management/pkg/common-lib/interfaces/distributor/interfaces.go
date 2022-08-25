@@ -19,6 +19,7 @@ package distributor
 import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 )
 
 type Interface interface {
@@ -27,4 +28,6 @@ type Interface interface {
 	ListNodesForClient(clientId string) ([]*types.LogicalNode, types.TransitResourceVersionMap, error)
 	Watch(clientId string, rvs types.TransitResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error
 	ProcessEvents(events []*event.NodeEvent) (bool, types.TransitResourceVersionMap)
+
+	GetNodeStatus(region location.Region, resourcePartition location.ResourcePartition, nodeId string) (*types.LogicalNode, error)
 }

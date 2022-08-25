@@ -31,6 +31,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	apiTypes "global-resource-service/resource-management/pkg/service-api/types"
 )
 
@@ -121,6 +122,52 @@ func (i *Installer) handleClientUnRegistration(resp http.ResponseWriter, req *ht
 	klog.V(3).Infof("not implemented")
 	resp.WriteHeader(http.StatusNotImplemented)
 	return
+}
+
+func (i *Installer) NodeHandler(resp http.ResponseWriter, req *http.Request) {
+	klog.V(3).Infof("handle /resource/nodes/. URL path: %s", req.URL.Path)
+
+	switch req.Method {
+	case http.MethodGet:
+		regionName, rpName, nodeId := getNodeId(req)
+		resp.WriteHeader(http.StatusOK)
+		resp.Header().Set("Content-Type", "text/plain")
+
+		region := location.GetRegionFromRegionName(regionName)
+		resourceParition := location.GetPartitionFromPartitionName(rpName)
+		if region == location.Region(-1) || resourceParition == location.ResourcePartition(-1) {
+			resp.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		node, err := i.dist.GetNodeStatus(region, resourceParition, nodeId)
+		if err == types.Error_ObjectNotFound {
+			resp.WriteHeader(http.StatusNotFound)
+		} else if err != nil {
+			klog.Errorf("Error getting node status: region %v, rp %v, nodeId %s, error [%v]", regionName, rpName, nodeId, err)
+			resp.WriteHeader(http.StatusInternalServerError)
+		} else {
+			ret := apiTypes.NodeResponse{Node: *node}
+			b, err := json.Marshal(ret)
+			if err != nil {
+				klog.V(3).Infof("error marshal client response. error %v", err)
+				resp.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			_, err = resp.Write(b)
+			if err != nil {
+				klog.V(3).Infof("error write response. error %v", err)
+				resp.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			return
+		}
+	default:
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 }
 
 func (i *Installer) ResourceHandler(resp http.ResponseWriter, req *http.Request) {
@@ -266,6 +313,15 @@ func getClientId(req *http.Request) string {
 	clientId = strings.Split(clientId, "?")[0]
 
 	return clientId
+}
+
+// get nodeId from url path
+func getNodeId(req *http.Request) (string, string, string) {
+	// urlpath is fixed "/nodes?nodeId=&region=&resourcePartition="
+	nodeId := req.URL.Query().Get("nodeId")
+	regionName := req.URL.Query().Get("region")
+	resourceParitionName := req.URL.Query().Get("resourcePartition")
+	return regionName, resourceParitionName, nodeId
 }
 
 func getResourceVersionsMap(req *http.Request) (types.TransitResourceVersionMap, error) {

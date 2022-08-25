@@ -60,6 +60,7 @@ func Run(c *Config) error {
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	// TODO: reuse k8s mux wrapper, pathrecorder.go for simplify this handler by each path
+	r.HandleFunc(endpoints.NodeStatusPath, installer.NodeHandler)
 
 	r.HandleFunc(endpoints.ListWatchResourcePath, installer.ResourceHandler)
 	r.HandleFunc(endpoints.UpdateResourcePath, installer.ResourceHandler)

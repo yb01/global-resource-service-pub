@@ -24,11 +24,13 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"k8s.io/klog/v2"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/distributor/storage"
 	apitypes "global-resource-service/resource-management/pkg/service-api/types"
@@ -45,11 +47,17 @@ var singleTestLock = sync.Mutex{}
 
 func setUp() *distributor.ResourceDistributor {
 	singleTestLock.Lock()
-	return distributor.GetResourceDistributor()
+	fakeStorage := &storage.FakeStorageInterface{
+		PersistDelayInNS: 20,
+	}
+	dis := distributor.GetResourceDistributor()
+	dis.SetPersistHelper(fakeStorage)
+
+	return dis
 }
 
 func tearDown(resourceDistributor *distributor.ResourceDistributor) {
-	defer singleTestLock.Unlock()
+	singleTestLock.Unlock()
 }
 
 func createRandomNode(rv int) *types.LogicalNode {
@@ -81,10 +89,6 @@ func TestHttpGet(t *testing.T) {
 	distributor := setUp()
 	defer tearDown(distributor)
 
-	fakeStorage := &storage.FakeStorageInterface{
-		PersistDelayInNS: 20,
-	}
-	distributor.SetPersistHelper(fakeStorage)
 	installer := NewInstaller(distributor)
 
 	// initialize node store with 10K nodes
@@ -157,4 +161,50 @@ func findNodeInList(n *types.LogicalNode, l []types.LogicalNode) bool {
 	}
 
 	return false
+}
+
+func TestHTTPGetNodeStatus(t *testing.T) {
+	distributor := setUp()
+	defer tearDown(distributor)
+
+	installer := NewInstaller(distributor)
+
+	// initialize node store with 10K nodes
+	eventsAdd := generateAddNodeEvent(10000)
+	distributor.ProcessEvents(eventsAdd)
+
+	for i := 0; i < 10; i++ {
+		nodeId := eventsAdd[i].Node.Id
+		regionName := location.Region(eventsAdd[i].Node.GeoInfo.Region).String()
+		rpName := location.ResourcePartition(eventsAdd[i].Node.GeoInfo.ResourcePartition).String()
+
+		start := time.Now()
+		resourcePath := fmt.Sprintf("/nodes?nodeId=%s&region=%v&resourcePartition=%v", nodeId, regionName, rpName)
+		req, err := http.NewRequest(http.MethodGet, resourcePath, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		recorder := httptest.NewRecorder()
+		installer.NodeHandler(recorder, req)
+		resp := apitypes.NodeResponse{}
+		actualNode := eventsAdd[i].Node
+
+		dec := json.NewDecoder(recorder.Body)
+		for dec.More() {
+			err := dec.Decode(&resp)
+			if err != nil {
+				klog.Errorf("decode nodes error: %v\n", err)
+				t.Fail()
+			}
+
+			decNode := resp.Node
+			assert.Equal(t, actualNode.ResourceVersion, decNode.ResourceVersion)
+			assert.Equal(t, actualNode.Id, decNode.Id)
+			assert.Equal(t, actualNode.LastUpdatedTime, decNode.LastUpdatedTime)
+		}
+
+		duration := time.Since(start)
+		t.Logf("Get node %s status in %v", actualNode.Id, duration)
+	}
 }
