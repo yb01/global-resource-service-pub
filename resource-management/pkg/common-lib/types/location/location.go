@@ -17,7 +17,10 @@ limitations under the License.
 package location
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 const RingRange = float64(360)
@@ -32,15 +35,6 @@ func NewLocation(region Region, partition ResourcePartition) *Location {
 		region:    region,
 		partition: partition,
 	}
-}
-
-func NewLocationFromName(regionName, partitionName string) *Location {
-	region := GetRegionFromRegionName(regionName)
-	partition := GetPartitionFromPartitionName(partitionName)
-	if region >= 0 && partition >= 0 {
-		return NewLocation(region, partition)
-	}
-	return nil
 }
 
 type arc struct {
@@ -109,6 +103,7 @@ var Regions = []Region{}
 // Defined and doced by region admin
 type ResourcePartition int
 
+// later this const list will be constructed from config
 const (
 	ResourcePartition1  ResourcePartition = 0
 	ResourcePartition2  ResourcePartition = 1
@@ -130,66 +125,49 @@ const (
 	ResourcePartition18 ResourcePartition = 17
 	ResourcePartition19 ResourcePartition = 18
 	ResourcePartition20 ResourcePartition = 19
+	ResourcePartition21 ResourcePartition = 20
+	ResourcePartition22 ResourcePartition = 21
+	ResourcePartition23 ResourcePartition = 22
+	ResourcePartition24 ResourcePartition = 23
+	ResourcePartition25 ResourcePartition = 24
+	ResourcePartition26 ResourcePartition = 25
+	ResourcePartition27 ResourcePartition = 26
+	ResourcePartition28 ResourcePartition = 27
+	ResourcePartition29 ResourcePartition = 28
+	ResourcePartition30 ResourcePartition = 29
+	ResourcePartition31 ResourcePartition = 30
+	ResourcePartition32 ResourcePartition = 31
+	ResourcePartition33 ResourcePartition = 32
+	ResourcePartition34 ResourcePartition = 33
+	ResourcePartition35 ResourcePartition = 34
+	ResourcePartition36 ResourcePartition = 35
+	ResourcePartition37 ResourcePartition = 36
+	ResourcePartition38 ResourcePartition = 37
+	ResourcePartition39 ResourcePartition = 38
+	ResourcePartition40 ResourcePartition = 39
+
+	ResourcePartitionMax = 40
 )
 
-// later this map will be construction from config
-var partitionToPartitionName = map[ResourcePartition]string{
-	ResourcePartition1:  "RP1",
-	ResourcePartition2:  "RP2",
-	ResourcePartition3:  "RP3",
-	ResourcePartition4:  "RP4",
-	ResourcePartition5:  "RP5",
-	ResourcePartition6:  "RP6",
-	ResourcePartition7:  "RP7",
-	ResourcePartition8:  "RP8",
-	ResourcePartition9:  "RP9",
-	ResourcePartition10: "RP10",
-	ResourcePartition11: "RP11",
-	ResourcePartition12: "RP12",
-	ResourcePartition13: "RP13",
-	ResourcePartition14: "RP14",
-	ResourcePartition15: "RP15",
-	ResourcePartition16: "RP16",
-	ResourcePartition17: "RP17",
-	ResourcePartition18: "RP18",
-	ResourcePartition19: "RP19",
-	ResourcePartition20: "RP20",
-}
-
-// later this map will be constructed from config
-var partitionNameToPartition = map[string]ResourcePartition{
-	"RP1":  ResourcePartition1,
-	"RP2":  ResourcePartition2,
-	"RP3":  ResourcePartition3,
-	"RP4":  ResourcePartition4,
-	"RP5":  ResourcePartition5,
-	"RP6":  ResourcePartition6,
-	"RP7":  ResourcePartition7,
-	"RP8":  ResourcePartition8,
-	"RP9":  ResourcePartition9,
-	"RP10": ResourcePartition10,
-	"RP11": ResourcePartition11,
-	"RP12": ResourcePartition12,
-	"RP13": ResourcePartition13,
-	"RP14": ResourcePartition14,
-	"RP15": ResourcePartition15,
-	"RP16": ResourcePartition16,
-	"RP17": ResourcePartition17,
-	"RP18": ResourcePartition18,
-	"RP19": ResourcePartition19,
-	"RP20": ResourcePartition20,
-}
-
 func (rp ResourcePartition) String() string {
-	return partitionToPartitionName[rp]
+	return rp.GetPartitionName()
 }
 
-func GetPartitionFromPartitionName(partitionName string) ResourcePartition {
-	if partition, isOK := partitionNameToPartition[partitionName]; isOK {
-		return partition
-	} else {
-		return -1 //undefined
+func (rp ResourcePartition) GetPartitionName() string {
+	return fmt.Sprintf("RP%d", int(rp)+1)
+}
+
+func GetPartitionFromPartitionName(partitionName string) (ResourcePartition, error) {
+	values := strings.Split(partitionName, "RP")
+	if len(values) != 2 || values[0] != "" {
+		return -1, errors.New("Invalid resource partition") //undefined
 	}
+
+	num, err := strconv.Atoi(values[1])
+	if err != nil || num > ResourcePartitionMax || num < 1 {
+		return -1, errors.New("Invalid resource partition") //undefined
+	}
+	return ResourcePartition(num - 1), nil
 }
 
 var ResourcePartitions = []ResourcePartition{}
@@ -203,7 +181,7 @@ func init() {
 		Regions = append(Regions, Region(i))
 	}
 	// initialize ResourcePartitions
-	for i := 0; i < len(partitionToPartitionName); i++ {
+	for i := 0; i < ResourcePartitionMax; i++ {
 		ResourcePartitions = append(ResourcePartitions, ResourcePartition(i))
 	}
 

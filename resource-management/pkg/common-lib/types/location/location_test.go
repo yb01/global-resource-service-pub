@@ -163,3 +163,23 @@ func TestGetLocationRangeByObject_Performance(t *testing.T) {
 		t.Logf("Get location range %d times in %v\n", count[i], duration)
 	}
 }
+
+func TestGetPartitionFromPartitionName(t *testing.T) {
+	for i := 0; i < ResourcePartitionMax; i++ {
+		rp, err := GetPartitionFromPartitionName(fmt.Sprintf("RP%d", i+1))
+		assert.Nil(t, err)
+		assert.Equal(t, ResourcePartition(i), rp)
+	}
+
+	rp, err := GetPartitionFromPartitionName("")
+	assert.NotNil(t, err)
+	assert.Equal(t, ResourcePartition(-1), rp)
+
+	rp, err = GetPartitionFromPartitionName("RP0")
+	assert.NotNil(t, err)
+	assert.Equal(t, ResourcePartition(-1), rp)
+
+	rp, err = GetPartitionFromPartitionName("RP41")
+	assert.NotNil(t, err)
+	assert.Equal(t, ResourcePartition(-1), rp)
+}

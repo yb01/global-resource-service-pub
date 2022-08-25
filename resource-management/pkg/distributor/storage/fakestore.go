@@ -51,7 +51,7 @@ func (fs *FakeStorageInterface) SetTestNodeIdMatch(isMatch bool) {
 func (fs *FakeStorageInterface) PersistNodes(nodesToPersist []*types.LogicalNode) bool {
 	fs.simulateDelay(len(nodesToPersist))
 
-	klog.Infof("TestNodeIdMatch = %v", fs.isTestNodeIdMatch)
+	//klog.Infof("TestNodeIdMatch = %v", fs.isTestNodeIdMatch)
 	if fs.isTestNodeIdMatch {
 		fs.nodeIdCacheLock.Lock()
 		for i := 0; i < len(nodesToPersist); i++ {
