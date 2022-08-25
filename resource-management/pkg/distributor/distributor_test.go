@@ -19,6 +19,7 @@ package distributor
 import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/klog/v2"
 	"strconv"
 	"sync"
 	"testing"
@@ -218,6 +219,15 @@ func generateAddNodeEvent(eventNum int, loc *location.Location) []*event.NodeEve
 		result[i] = nodeEvent
 	}
 	return result
+}
+
+func generateAddNodeEventToArray(eventNum int, loc *location.Location, generatedEvents *[]*event.NodeEvent, startIndex int) {
+	for i := 0; i < eventNum; i++ {
+		rvToGenerate += 1
+		node := createRandomNode(rvToGenerate, loc)
+		nodeEvent := event.NewNodeEvent(node, event.Added)
+		(*generatedEvents)[i+startIndex] = nodeEvent
+	}
 }
 
 func generateUpdateNodeEvents(originalEvents []*event.NodeEvent) []*event.NodeEvent {
@@ -433,6 +443,96 @@ func TestRegistrationWorkflow(t *testing.T) {
 	}
 	assert.Equal(t, len(nodes), watchedEventCount)
 	t.Logf("Latest rvs after updates: %v\n", rvMap2)
+}
+
+func TestRegistration5MCase(t *testing.T) {
+	testCases := []struct {
+		name             string
+		regionNum        int
+		rpNum            int
+		hostPerRP        int
+		schedulerNum     int
+		hostPerScheduler int
+	}{
+		{
+			// 5 region, each has 40 resource partitions, each partition has 25K nodes; 100 scheduler, each request 50K nodes
+			name:             "5 regions, 40 RPs (25K nodes each); 100 schedulers, 50K nodes each",
+			regionNum:        5,
+			rpNum:            40,
+			hostPerRP:        25000,
+			schedulerNum:     100,
+			hostPerScheduler: 50000,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			distributor := setUp()
+			defer tearDown()
+
+			previousNodeCount := 0
+			// initialize node store with nodes
+			for i := 0; i < tt.regionNum; i++ {
+				region := location.Region(i)
+				eventsAdd := make([]*event.NodeEvent, tt.rpNum*tt.hostPerRP)
+				for j := 0; j < tt.rpNum; j++ {
+					resourcePartition := location.ResourcePartition(j)
+
+					loc := location.NewLocation(region, resourcePartition)
+					generateAddNodeEventToArray(tt.hostPerRP, loc, &eventsAdd, j*tt.hostPerRP)
+				}
+				measureProcessEvent(t, distributor, "AddNode", eventsAdd, previousNodeCount)
+				previousNodeCount += len(eventsAdd)
+			}
+
+			// register scheduler
+			wg := new(sync.WaitGroup)
+			wg.Add(tt.schedulerNum)
+			totalErrors := 0
+			errLock := sync.RWMutex{}
+
+			for i := 0; i < tt.schedulerNum; i++ {
+				go func(w *sync.WaitGroup, errCount *int, lock sync.RWMutex) {
+					client := types.Client{
+						ClientId:   uuid.New().String(),
+						Resource:   types.ResourceRequest{TotalMachines: tt.hostPerScheduler},
+						ClientInfo: types.ClientInfoType{}}
+
+					start := time.Now()
+					err := distributor.RegisterClient(&client)
+					duration := time.Since(start)
+					clientId := client.ClientId
+
+					assert.NotNil(t, clientId, "Expecting not nil client id")
+					assert.False(t, clientId == "", "Expecting non empty client id")
+					if err != nil {
+						assert.Equal(t, "Not enough hosts", err.Error())
+						lock.Lock()
+						*errCount = *errCount + 1
+						lock.Unlock()
+					} else {
+						klog.Infof("Register client %s took %v", clientId, duration)
+
+						// list
+						start = time.Now()
+						nodes, latestRVs, err2 := distributor.ListNodesForClient(clientId)
+						duration = time.Since(start)
+
+						assert.Nil(t, err2)
+						assert.NotNil(t, latestRVs)
+						assert.True(t, len(nodes) >= tt.hostPerScheduler)
+						klog.Infof("List nodes for client %s took %v", clientId, duration)
+					}
+
+					w.Done()
+				}(wg, &totalErrors, errLock)
+			}
+
+			wg.Wait()
+			assert.Equal(t, 1, totalErrors)
+			t.Logf("%s succeed", tt.name)
+		})
+	}
 }
 
 func TestWatchRenewal(t *testing.T) {

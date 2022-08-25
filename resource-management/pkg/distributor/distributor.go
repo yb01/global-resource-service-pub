@@ -40,7 +40,7 @@ type ResourceDistributor struct {
 
 	// clientId to virtual node store map
 	clientToStores map[string][]*storage.VirtualNodeStore
-	allocateLock   sync.Mutex
+	allocateLock   sync.RWMutex
 
 	persistHelper store.StoreInterface
 }
@@ -193,9 +193,9 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Lo
 	if clientId == "" {
 		return nil, nil, errors.New("Empty clientId")
 	}
-	dis.allocateLock.Lock()
-	defer dis.allocateLock.Unlock()
+	dis.allocateLock.RLock()
 	assignedStores, isOK := dis.clientToStores[clientId]
+	dis.allocateLock.RUnlock()
 	if !isOK {
 		return nil, nil, errors.New(fmt.Sprintf("Client %s not registered.", clientId))
 	}
