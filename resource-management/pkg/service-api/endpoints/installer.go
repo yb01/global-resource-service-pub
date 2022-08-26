@@ -134,8 +134,8 @@ func (i *Installer) NodeHandler(resp http.ResponseWriter, req *http.Request) {
 		resp.Header().Set("Content-Type", "text/plain")
 
 		region := location.GetRegionFromRegionName(regionName)
-		resourceParition := location.GetPartitionFromPartitionName(rpName)
-		if region == location.Region(-1) || resourceParition == location.ResourcePartition(-1) {
+		resourceParition, err := location.GetPartitionFromPartitionName(rpName)
+		if err != nil {
 			resp.WriteHeader(http.StatusBadRequest)
 			return
 		}
