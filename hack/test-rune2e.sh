@@ -92,11 +92,35 @@ function start-scheduler {
         args+=" ${extra_args}"
         log_file="${name}.log"
         for (( i=0; i<${service_num}; i++ )); do
-                sleep 1
+                sleep ${SCHEDULER_START_DELAY}
                 gocmd=" && /usr/local/go/bin/go run resource-management/test/e2e/singleClientTest.go ${args} > ${SIM_LOG_DIR}/${log_file}.$i 2>&1 &"
                 sshcmd="${cmd}${gocmd}"
                 ssh-config "${sshcmd}" "${name}" "${zone}"
         done
+}
+
+# Returns the total number of resourcemanagement managed.
+function get-num-nodes {
+        echo "$((${SIM_NUM}*${SIM_RP_NUM}*${NODES_PER_RP}))"
+}
+
+#TODO: 10M suggested_delay_second is an estimated number and may change base on test result
+#1M/2M/5M suggested_delay_second was tested and verified.
+function get-delay-second {
+  local suggested_delay_second=10
+  if [[ "$(get-num-nodes)" -ge "1000000" ]]; then
+    suggested_delay_second=20
+  fi
+  if [[ "$(get-num-nodes)" -ge "2000000" ]]; then
+    suggested_delay_second=40
+  fi
+  if [[ "$(get-num-nodes)" -ge "5000000" ]]; then
+    suggested_delay_second=180
+  fi
+  if [[ "$(get-num-nodes)" -ge "10000000" ]]; then
+    suggested_delay_second=600
+  fi
+  echo "${suggested_delay_second}"
 }
 
 ###############
@@ -108,7 +132,6 @@ IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
 IFS=','; SIM_REGION_LIST=($SIM_REGIONS); unset IFS;
 IFS=','; SIM_DOWN_TIME_LIST=($SIM_WAIT_DOWN_TIME); unset IFS;
-
 
 ###TODO
 ###using go run to start all component for now
@@ -162,8 +185,8 @@ if [ ${SIM_NUM} -gt 0 ]; then
         fi
 fi
 
-echo "Waiting 10 seconds to get simulator running"
-sleep 10
+echo "Waiting $(get-delay-second) seconds to get simulator running"
+sleep $(get-delay-second)
 
 if [ ${CLIENT_NUM} -gt 0 ]; then
         if [[ "${SERVICE_URL}" != "" ]]; then
@@ -200,5 +223,4 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                 echo "Failed to start scheduler service, Please ensure SERVICE_URL: ${SERVICE_URL} is correct"
         fi
 fi
-
 echo "Testing is running now, Please remember to run ./hack/test-logcollect.sh to collect logs once testing finished"

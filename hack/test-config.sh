@@ -88,6 +88,7 @@ SERVICE_EXTRA_ARGS=${SERVICE_EXTRA_ARGS:-}
 SIM_EXTRA_ARGS=${SIM_EXTRA_ARGS:-}
 CLIENT_EXTRA_ARGS=${CLIENT_EXTRA_ARGS:-}
 SIM_PORT=${SIM_PORT:-"9119"}
+SCHEDULER_START_DELAY=${SCHEDULER_START_DELAY:-2}   ##using between each scheduler, when starting multi scheduler on one client machine 
 
 SIM_REGIONS=${SIM_REGIONS:-"Beijing,Shanghai"}
 SIM_RP_NUM=${SIM_RP_NUM:-"10"}
