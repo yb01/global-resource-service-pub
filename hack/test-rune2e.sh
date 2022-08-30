@@ -109,10 +109,10 @@ function get-num-nodes {
 function get-delay-second {
   local suggested_delay_second=10
   if [[ "$(get-num-nodes)" -ge "1000000" ]]; then
-    suggested_delay_second=20
+    suggested_delay_second=30
   fi
   if [[ "$(get-num-nodes)" -ge "2000000" ]]; then
-    suggested_delay_second=40
+    suggested_delay_second=90
   fi
   if [[ "$(get-num-nodes)" -ge "5000000" ]]; then
     suggested_delay_second=180
