@@ -24,7 +24,6 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
 
-type RegionNodes [][]*types.LogicalNode
 type RegionNodeEvents [][]*event.NodeEvent
 
 type PostCRVstatus bool
