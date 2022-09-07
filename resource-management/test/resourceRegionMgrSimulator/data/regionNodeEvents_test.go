@@ -25,6 +25,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 )
 
 func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
@@ -69,32 +70,12 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	allWaitGroup.Add(1)
 	updateEventCount := atEachMin10
 
-	go func(expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, wg *sync.WaitGroup) {
-		eventCount := 0
-
-		for e := range watchCh {
-			assert.Equal(t, event.Modified, e.Type)
-			loc := types.RvLocation{
-				Region:    location.Beijing,
-				Partition: location.ResourcePartition(e.Node.GeoInfo.ResourcePartition),
-			}
-			requestedRVForRP := rvs[loc]
-			assert.True(t, requestedRVForRP < e.Node.GetResourceVersionInt64())
-
-			eventCount++
-
-			if eventCount >= expectedEventCount {
-				wg.Done()
-				close(watchCh)
-				close(stopCh)
-				return
-			}
-		}
-	}(updateEventCount, rvs, watchCh, allWaitGroup)
+	runWatch(t, updateEventCount, rvs, watchCh, stopCh, allWaitGroup)
 
 	// generate update node events
 	makeDataUpdate(atEachMin10)
 	allWaitGroup.Wait()
+	time.Sleep(1 * time.Millisecond)
 	t.Logf("Watch %d events succeed!\n", updateEventCount)
 
 	// watch from previous resource versions again
@@ -107,7 +88,34 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	}
 
 	allWaitGroup.Add(1)
-	go func(expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, wg *sync.WaitGroup) {
+	start = time.Now()
+	runWatch(t, updateEventCount, rvs, watchCh, stopCh, allWaitGroup)
+
+	allWaitGroup.Wait()
+	duration = time.Since(start)
+	time.Sleep(1 * time.Millisecond)
+	// Duration 27.405µs
+	t.Logf("Re-watch %d events succeed! Duration %v\n", updateEventCount, duration)
+
+	// Test RP down event watches
+	watchCh = make(chan *event.NodeEvent)
+	stopCh = make(chan struct{})
+	err = Watch(rvs, watchCh, stopCh)
+	if err != nil {
+		assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
+		return
+	}
+
+	allWaitGroup.Add(1)
+	runWatch(t, config.NodesPerRP+atEachMin10, rvs, watchCh, stopCh, allWaitGroup)
+	makeOneRPDown()
+	allWaitGroup.Wait()
+	time.Sleep(1 * time.Millisecond)
+	t.Logf("RP down test: Watch %d events succeed!\n", config.NodesPerRP+atEachMin10)
+}
+
+func runWatch(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, stopCh chan struct{}, wg *sync.WaitGroup) {
+	go func(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, stopCh chan struct{}, wg *sync.WaitGroup) {
 		eventCount := 0
 
 		for e := range watchCh {
@@ -123,11 +131,10 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 
 			if eventCount >= expectedEventCount {
 				wg.Done()
+				close(stopCh)
+				close(watchCh)
 				return
 			}
 		}
-	}(updateEventCount, rvs, watchCh, allWaitGroup)
-
-	allWaitGroup.Wait()
-	t.Logf("Re-watch %d events succeed!\n", updateEventCount)
+	}(t, expectedEventCount, rvs, watchCh, stopCh, wg)
 }
