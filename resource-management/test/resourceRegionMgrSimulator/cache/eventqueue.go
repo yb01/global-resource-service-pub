@@ -19,13 +19,13 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 	"k8s.io/klog/v2"
 	"sort"
 	"sync"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
-	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/data"
 )
 
 const LengthOfNodeEventQueue = 10000
@@ -118,6 +118,7 @@ type NodeEventQueue struct {
 func NewNodeEventQueue(resourcePartitionNum int) *NodeEventQueue {
 	queue := &NodeEventQueue{
 		eventQueueByRP: make([]*nodeEventQueueByRP, resourcePartitionNum),
+		enqueueLock:    sync.RWMutex{},
 	}
 
 	for i := 0; i < resourcePartitionNum; i++ {
@@ -125,6 +126,14 @@ func NewNodeEventQueue(resourcePartitionNum int) *NodeEventQueue {
 	}
 
 	return queue
+}
+
+func (eq *NodeEventQueue) AcquireSnapshotRLock() {
+	eq.enqueueLock.RLock()
+}
+
+func (eq *NodeEventQueue) ReleaseSnapshotRLock() {
+	eq.enqueueLock.RUnlock()
 }
 
 func (eq *NodeEventQueue) EnqueueEvent(e *event.NodeEvent) {
@@ -184,7 +193,7 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 }
 
 func (eq *NodeEventQueue) getAllEventsSinceResourceVersion(rvs types.InternalResourceVersionMap) ([]*event.NodeEvent, error) {
-	locStartPostitions := make([]int, data.RpNum)
+	locStartPostitions := make([]int, config.RpNum)
 
 	for loc, rv := range rvs {
 		qByRP := eq.eventQueueByRP[loc.GetResourcePartition()]
