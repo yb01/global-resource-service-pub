@@ -202,7 +202,7 @@ func makeOneRPDown() {
 
 		newEvent := event.NewNodeEvent(node, event.Modified)
 
-		//RegionNodeEventsList[selectedRP][i] = newEvent - TODO - check whether necessary
+		//RegionNodeEventsList[selectedRP][i] = no need: keep event as added, node will be updated as pointer
 		RegionNodeEventQueue.EnqueueEvent(newEvent)
 
 		rvToGenerateRPs++
@@ -247,7 +247,7 @@ func makeDataUpdate(changesThreshold int) {
 			node.LastUpdatedTime = time.Now().UTC()
 
 			newEvent := event.NewNodeEvent(node, event.Modified)
-			//RegionNodeEventsList[j][i] = newEvent - TODO - check whether necessary
+			//RegionNodeEventsList[j][i] = newEvent - no need: keep event as added, node will be updated as pointer
 			RegionNodeEventQueue.EnqueueEvent(newEvent)
 
 			count++

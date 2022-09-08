@@ -56,7 +56,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	}
 
 	// 500K nodes, list duration 179.605574ms
-	t.Logf("List %v nodes, return RVS %v. duration %v", count, rvs, duration)
+	t.Logf("List %v nodes, duration %v, return RVS %v.", count, duration, rvs)
 
 	// Watch node events
 	watchCh := make(chan *event.NodeEvent)
