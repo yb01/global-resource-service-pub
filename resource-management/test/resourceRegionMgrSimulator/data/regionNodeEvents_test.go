@@ -18,10 +18,14 @@ package data
 
 import (
 	"github.com/stretchr/testify/assert"
-	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"sync"
 	"testing"
 	"time"
+
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 )
 
 func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
@@ -36,81 +40,101 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	assert.Equal(t, nodesPerRP, len(RegionNodeEventsList[0]))
 	t.Logf("Time to generate %d init events: %v", rpNum*nodesPerRP, duration)
 
+	// List nodes
+	start = time.Now()
+	nodesEventList, count, rvs := ListNodes()
+	duration = time.Since(start)
+	assert.Equal(t, uint64(rpNum*nodesPerRP), count)
+	assert.NotNil(t, nodesEventList)
+	for i := 0; i < rpNum; i++ {
+		loc := types.RvLocation{
+			Region:    location.Beijing,
+			Partition: location.ResourcePartition(i),
+		}
+		currentRV := rvs[loc]
+		assert.Equal(t, uint64(nodesPerRP), currentRV)
+	}
+
+	// 500K nodes, list duration 179.605574ms
+	t.Logf("List %v nodes, duration %v, return RVS %v.", count, duration, rvs)
+
+	// Watch node events
+	watchCh := make(chan *event.NodeEvent)
+	stopCh := make(chan struct{})
+	err := Watch(rvs, watchCh, stopCh)
+	if err != nil {
+		assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
+		return
+	}
+	allWaitGroup := new(sync.WaitGroup)
+	allWaitGroup.Add(1)
+	updateEventCount := atEachMin10
+
+	runWatch(t, updateEventCount, rvs, watchCh, stopCh, allWaitGroup)
+
 	// generate update node events
 	makeDataUpdate(atEachMin10)
+	allWaitGroup.Wait()
+	time.Sleep(1 * time.Millisecond)
+	t.Logf("Watch %d events succeed!\n", updateEventCount)
 
-	// get update nodes
-	rvs := make(types.TransitResourceVersionMap)
-	for j := 0; j < location.GetRPNum(); j++ {
-		rvLoc := types.RvLocation{
-			Region:    location.Region(RegionId),
-			Partition: location.ResourcePartition(j),
-		}
-		rvs[rvLoc] = uint64(nodesPerRP)
+	// watch from previous resource versions again
+	watchCh = make(chan *event.NodeEvent)
+	stopCh = make(chan struct{})
+	err = Watch(rvs, watchCh, stopCh)
+	if err != nil {
+		assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
+		return
 	}
+
+	allWaitGroup.Add(1)
 	start = time.Now()
-	modifiedEvents, count := GetRegionNodeModifiedEventsCRV(rvs)
-	// 29.219756ms -> 4.096µs
+	runWatch(t, updateEventCount, rvs, watchCh, stopCh, allWaitGroup)
+
+	allWaitGroup.Wait()
 	duration = time.Since(start)
-	assert.NotNil(t, modifiedEvents)
-	assert.Equal(t, rpNum, len(modifiedEvents))
-	t.Logf("Time to get %d update events in Daily data pattern: %v", count, duration)
-	assert.Equal(t, uint64(atEachMin10), count)
+	time.Sleep(1 * time.Millisecond)
+	// Duration 27.405µs
+	t.Logf("Re-watch %d events succeed! Duration %v\n", updateEventCount, duration)
 
-	//check remaining event list
-	assert.Equal(t, rpNum, len(RegionNodeUpdateEventList))
-	for i := 0; i < rpNum; i++ {
-		assert.Nil(t, nil, RegionNodeUpdateEventList[i])
+	// Test RP down event watches
+	watchCh = make(chan *event.NodeEvent)
+	stopCh = make(chan struct{})
+	err = Watch(rvs, watchCh, stopCh)
+	if err != nil {
+		assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
+		return
 	}
 
-	// update again
-	makeDataUpdate(atEachMin10)
-	makeDataUpdate(atEachMin10)
-	for j := 0; j < location.GetRPNum(); j++ {
-		rvLoc := types.RvLocation{
-			Region:    location.Region(RegionId),
-			Partition: location.ResourcePartition(j),
-		}
-		rvs[rvLoc] = uint64(nodesPerRP + 1)
-	}
-	start = time.Now()
-	modifiedEvents, count = GetRegionNodeModifiedEventsCRV(rvs)
-	// 3.987µs
-	duration = time.Since(start)
-	assert.NotNil(t, modifiedEvents)
-	assert.Equal(t, rpNum, len(modifiedEvents))
-	t.Logf("Time to get %d update events in Daily data pattern: %v", count, duration)
-	assert.Equal(t, atEachMin10*2, int(count))
-
-	//check remaining event list
-	assert.Equal(t, rpNum, len(RegionNodeUpdateEventList))
-	for i := 0; i < rpNum; i++ {
-		assert.Nil(t, nil, RegionNodeUpdateEventList[i])
-	}
-
-	// generate update node events of Outage pattern
+	allWaitGroup.Add(1)
+	runWatch(t, config.NodesPerRP+atEachMin10, rvs, watchCh, stopCh, allWaitGroup)
 	makeOneRPDown()
+	allWaitGroup.Wait()
+	time.Sleep(1 * time.Millisecond)
+	t.Logf("RP down test: Watch %d events succeed!\n", config.NodesPerRP+atEachMin10)
+}
 
-	// get update nodes
-	for j := 0; j < location.GetRPNum(); j++ {
-		rvLoc := types.RvLocation{
-			Region:    location.Region(RegionId),
-			Partition: location.ResourcePartition(j),
+func runWatch(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, stopCh chan struct{}, wg *sync.WaitGroup) {
+	go func(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, stopCh chan struct{}, wg *sync.WaitGroup) {
+		eventCount := 0
+
+		for e := range watchCh {
+			assert.Equal(t, event.Modified, e.Type)
+			loc := types.RvLocation{
+				Region:    location.Beijing,
+				Partition: location.ResourcePartition(e.Node.GeoInfo.ResourcePartition),
+			}
+			requestedRVForRP := rvs[loc]
+			assert.True(t, requestedRVForRP < e.Node.GetResourceVersionInt64())
+
+			eventCount++
+
+			if eventCount >= expectedEventCount {
+				wg.Done()
+				close(stopCh)
+				close(watchCh)
+				return
+			}
 		}
-		rvs[rvLoc] = uint64(nodesPerRP)
-	}
-	start = time.Now()
-	modifiedEvents, count = GetRegionNodeModifiedEventsCRV(rvs)
-	// 38.041491ms -> 3.929264ms on AWS EC2 instance (t2.2xlarge - 8 vcpu/32G memory)
-	duration = time.Since(start)
-	assert.NotNil(t, modifiedEvents)
-	assert.Equal(t, rpNum, len(modifiedEvents))
-	t.Logf("Time to get %d update events in Outage data pattern: %v", count, duration)
-	assert.Equal(t, uint64(nodesPerRP), count)
-
-	//check remaining event list
-	assert.Equal(t, rpNum, len(RegionNodeUpdateEventList))
-	for i := 0; i < rpNum; i++ {
-		assert.Nil(t, nil, RegionNodeUpdateEventList[i])
-	}
+	}(t, expectedEventCount, rvs, watchCh, stopCh, wg)
 }

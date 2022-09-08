@@ -21,6 +21,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/data"
 	simulatorTypes "global-resource-service/resource-management/test/resourceRegionMgrSimulator/types"
 )
@@ -86,11 +87,12 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 	if r.URL.Path == InitPullPath || r.URL.Path == SubsequentPullPath {
 		var nodeEvents simulatorTypes.RegionNodeEvents
 		var count uint64
+		var crv types.TransitResourceVersionMap
 
 		if r.URL.Path == InitPullPath {
-			nodeEvents, count = data.GetRegionNodeAddedEvents(aggregatorClientReq.BatchLength)
+			nodeEvents, count, crv = data.ListNodes()
 		} else if r.URL.Path == SubsequentPullPath {
-			nodeEvents, count = data.GetRegionNodeModifiedEventsCRV(aggregatorClientReq.CRV)
+			//nodeEvents, count = data.Watch(aggregatorClientReq.CRV)
 		}
 
 		if count == 0 {
@@ -101,8 +103,8 @@ func (re *RegionNodeEventHandler) SimulatorHandler(rw http.ResponseWriter, r *ht
 
 		response := &simulatorTypes.ResponseFromRRM{
 			RegionNodeEvents: nodeEvents,
-			RvMap:            aggregatorClientReq.CRV,
-			Length:           uint64(count),
+			RvMap:            crv,
+			Length:           count,
 		}
 
 		// Serialize region node events result to JSON
