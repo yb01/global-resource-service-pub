@@ -88,20 +88,14 @@ function delete-machine-image {
 if [[ "${SIM_AUTO_DELETE}" == "true" && ${SIM_NUM} -gt 0 ]]; then
         echo "Deleting simulator resources"
         IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
-        if [ ${#INSTANCE_SIM_ZONE[@]} == 1 ]; then
-                delete-instance-groups "${SIM_INSTANCE_PREFIX}-${INSTANCE_SIM_ZONE[0]}-mig" "${INSTANCE_SIM_ZONE[0]}"
-                delete-instance-template "${SIM_INSTANCE_PREFIX}-template"
-        else
-                index=0
-                for zone in "${INSTANCE_SIM_ZONE[@]}"; do
-                        delete-vm-instance "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
-                        index=$(($index + 1)) 
-                done
-        fi
+        index=0
+        for zone in "${INSTANCE_SIM_ZONE[@]}"; do
+                delete-vm-instance "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
+                index=$(($index + 1)) 
+        done
         if [ "${SIMIMAGE_AUTO_DELETE}" == "true" ]; then
                 #waiting 60 seconds to get all instances deleted before delete images
                 sleep 60
-                delete-image "${SIM_IMAGE_NAME}"
                 delete-machine-image  "${SIM_IMAGE_NAME}"
         fi
 fi
@@ -109,20 +103,14 @@ fi
 if [[ "${CLIENT_AUTO_DELETE}" == "true"  && ${CLIENT_NUM} -gt 0 ]]; then
         echo "Deleting client scheduler resources"
         IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
-        if [ ${#INSTANCE_CLIENT_ZONE[@]} == 1 ]; then
-                delete-instance-groups "${CLIENT_INSTANCE_PREFIX}-${INSTANCE_CLIENT_ZONE[0]}-mig" "${INSTANCE_CLIENT_ZONE[0]}"
-                delete-instance-template "${CLIENT_INSTANCE_PREFIX}-template"
-        else
-                index=0
-                for zone in "${INSTANCE_CLIENT_ZONE[@]}"; do
-                        delete-vm-instance "${CLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
-                        index=$(($index + 1)) 
-                done
-        fi
+        index=0
+        for zone in "${INSTANCE_CLIENT_ZONE[@]}"; do
+                delete-vm-instance "${CLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
+                index=$(($index + 1)) 
+        done
         if [ "${CLIENTIMAGE_AUTO_DELETE}" == "true" ]; then
                 #waiting 60 seconds to get all instances deleted before delete images
                 sleep 60
-                delete-image "${CLIENT_IMAGE_NAME}"
                 delete-machine-image  "${CLIENT_IMAGE_NAME}"
         fi
 fi
@@ -130,20 +118,14 @@ fi
 if [[ "${SERVER_AUTO_DELETE}" == "true"  && ${SERVER_NUM} -gt 0 ]]; then
         echo "Deleting server resources"
         IFS=','; INSTANCE_SERVER_ZONE=($SERVER_ZONE); unset IFS;
-        if [ ${#INSTANCE_SERVER_ZONE[@]} == 1 ]; then
-                delete-instance-groups "${SERVER_INSTANCE_PREFIX}-${INSTANCE_SERVER_ZONE[0]}-mig" "${INSTANCE_SERVER_ZONE[0]}"
-                delete-instance-template "${SERVER_INSTANCE_PREFIX}-template"
-        else
-                index=0
-                for zone in "${INSTANCE_SERVER_ZONE[@]}"; do
-                        delete-vm-instance "${SERVER_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
-                        index=$(($index + 1)) 
-                done
-        fi
+        index=0
+        for zone in "${INSTANCE_SERVER_ZONE[@]}"; do
+                delete-vm-instance "${SERVER_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
+                index=$(($index + 1)) 
+        done
         if [ "${SERVERIMAGE_AUTO_DELETE}" == "true" ]; then
                 #waiting 60 seconds to get all instances deleted before delete images
                 sleep 60
-                delete-image "${SERVER_IMAGE_NAME}"
                 delete-machine-image  "${SERVER_IMAGE_NAME}"
         fi
 fi
