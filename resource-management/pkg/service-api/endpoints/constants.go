@@ -24,7 +24,7 @@ const (
 	RegionlessResourcePath = "/resource"
 
 	// TODO revisit and evaluate API paths.
-	NodeStatusPath = "/nodes?"
+	NodeStatusPath = "/nodes"
 
 	ListWatchResourcePath = RegionlessResourcePath + "/{clientid}"
 	UpdateResourcePath    = RegionlessResourcePath + "/{clientid}" + "/addResource"

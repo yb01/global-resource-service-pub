@@ -33,7 +33,7 @@ function start-service {
         cmd+=" && mkdir -p ${SERVER_LOG_DIR}"
         args=" --master_ip=${name}"
         args+=" --resource_urls=${urls}"
-        if [ ${log_level} != "" ]; then
+        if [ "${log_level}" != "" ]; then
                 args+=" -v=${log_level}"
         fi
         args+=" ${extra_args}"
@@ -86,7 +86,7 @@ function start-scheduler {
         args+=" --limit=${limit}"
         args+=" --action=watch"
         args+=" --repeats=1"
-        if [ ${log_level} != "" ]; then
+        if [ "${log_level}" != "" ]; then
                 args+=" -v=${log_level}"
         fi
         args+=" ${extra_args}"
@@ -97,6 +97,29 @@ function start-scheduler {
                 sshcmd="${cmd}${gocmd}"
                 ssh-config "${sshcmd}" "${name}" "${zone}"
         done
+}
+
+function start-nodequery-test {
+        local name="$1"
+        local zone="$2"
+        local service_url="$3"
+        local single_node_num="${4:-1}"
+        local batch_node_num="${5:-10}"
+        local log_level="${6:-}"
+        local extra_args="${7:-}"
+        echo "Starting node query testing on ${name}"
+        cmd="cd ${ADMINCLIENT_CODE_ROOT}"
+        cmd+=" && mkdir -p ${ADMINCLIENT_LOG_DIR}"
+        args=" --service_url=${service_url}"
+        args+=" --single_node_num=${single_node_num}"
+        args+=" --batch_node_num=${batch_node_num}"
+        if [ "${log_level}" != "" ]; then
+                args+=" -v=${log_level}"
+        fi
+        args+=" ${extra_args}"
+        log_file="${name}.log"
+        cmd+=" && /usr/local/go/bin/go run test/e2e/singleNodeQuery.go ${args} > ${ADMINCLIENT_LOG_DIR}/${log_file} 2>&1 "
+        ssh-config "${cmd}" "${name}" "${zone}"
 }
 
 # Returns the total number of resourcemanagement managed.
@@ -130,6 +153,7 @@ function get-delay-second {
 #IFS=','; INSTANCE_SERVER_ZONE=($SERVER_ZONE); unset IFS;
 IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
+IFS=','; INSTANCE_ADMINCLIENT_ZONE=($ADMINCLIENT_ZONE); unset IFS;
 IFS=','; SIM_REGION_LIST=($SIM_REGIONS); unset IFS;
 IFS=','; SIM_DOWN_TIME_LIST=($SIM_WAIT_DOWN_TIME); unset IFS;
 
@@ -183,6 +207,20 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                 done                  
         else
                 echo "Failed to start scheduler service, Please ensure SERVICE_URL: ${SERVICE_URL} is correct"
+        fi
+fi
+
+if [ "${ENABLE_ADMIN_E2E}" == "true" ]; then
+        if [ ${ADMINCLIENT_NUM} -gt 0 ]; then
+                if [[ "${SERVICE_URL}" != "" ]]; then
+                        index=0
+                        for zone in "${INSTANCE_ADMINCLIENT_ZONE[@]}"; do
+                                start-nodequery-test "${ADMINCLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" "${SERVICE_URL}" "${SINGLE_NODE_NUM}" "${BATCH_NODE_NUM}"  "${ADMINCLIENT_LOG_LEVEL}" "${ADMINCLIENT_EXTRA_ARGS}"
+                                index=$(($index + 1)) 
+                        done                  
+                else
+                        echo "Failed to start node query service, Please ensure SERVICE_URL: ${SERVICE_URL} is correct"
+                fi
         fi
 fi
 echo "Testing is running now, Please remember to run ./hack/test-logcollect.sh to collect logs once testing finished"

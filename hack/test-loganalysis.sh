@@ -158,4 +158,28 @@ for name in $( ls | grep server);do
 
 done
 
+if [ "${ENABLE_ADMIN_E2E}" == "true" ]; then
+  echo "Collecting node query test summary to csv"
+  for name in $( ls | grep adminclient);do
+    ###adding empty line to csv
+    echo "" >> ./csv/${csv_name}
+    echo "" >> ./csv/${csv_name}
+    echo "" >> ./csv/${csv_name}
+    echo "" >> ./csv/${csv_name}
+    echo "${name}">> ./csv/${csv_name}
+    echo "Metrics Item","Query Interval","Node Num for each interval","perc50","perc90","perc99">> ./csv/${csv_name}
+    line=$( echo $(grep "\[Metrics\]\[Nodes\]" $name | wc -l ))
+    for (( i=1; i<=${line}; i++ )); do
+      grep_line=$(echo $(grep "\[Metrics\]\[Nodes\]" $name | sed -n "$i p"))
+      metrics_item="[Metrics][Nodes]"
+      query_interval=$(echo $grep_line | sed "s/.*QueryInterval: //; s/, Number of nodes queried.*//")
+      node_interval=$(echo $grep_line | sed "s/.*queried during each interval: //; s/, perc50.*//")
+      perc50=$(echo $grep_line | sed "s/.*perc50: //; s/, perc90.*//")
+      perc90=$(echo $grep_line | sed "s/.*perc90: //; s/, perc99.*//")
+      perc99=$(echo $grep_line | sed "s/.*perc99: //; ")
+      echo "${metrics_item}","${query_interval}","${node_interval}","${perc50}","${perc90}","${perc99}">> ./csv/${csv_name}
+    done
+  done
+fi
+
 echo "Please check generated csv report under ${DESTINATION}/csv/${csv_name}"

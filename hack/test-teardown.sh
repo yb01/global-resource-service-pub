@@ -130,5 +130,20 @@ if [[ "${SERVER_AUTO_DELETE}" == "true"  && ${SERVER_NUM} -gt 0 ]]; then
         fi
 fi
 
+if [[ "${ADMINCLIENT_AUTO_DELETE}" == "true"  && ${ADMINCLIENT_NUM} -gt 0 ]]; then
+        echo "Deleting admin client resources"
+        IFS=','; INSTANCE_ADMINCLIENT_ZONE=($ADMINCLIENT_ZONE); unset IFS;
+        index=0
+        for zone in "${INSTANCE_ADMINCLIENT_ZONE[@]}"; do
+                delete-vm-instance "${ADMINCLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" &
+                index=$(($index + 1)) 
+        done
+        if [ "${ADMINCLIENTIMAGE_AUTO_DELETE}" == "true" ]; then
+                #waiting 60 seconds to get all instances deleted before delete images
+                sleep 60
+                delete-machine-image  "${ADMINCLIENT_IMAGE_NAME}"
+        fi
+fi
+
 echo "Done. All resources deleted successfully"
 

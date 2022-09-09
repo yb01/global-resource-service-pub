@@ -71,6 +71,7 @@ function copy-logs {
 IFS=','; INSTANCE_SERVER_ZONE=($SERVER_ZONE); unset IFS;
 IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
+IFS=','; INSTANCE_ADMINCLIENT_ZONE=($ADMINCLIENT_ZONE); unset IFS;
 export COLLECTDATE="$(date +"%m%d%y-%H%M%S")"
 export DESTINATION="${DES_LOG_DIR}/${COLLECTDATE}"
 if [ ${SERVER_NUM} -gt 0 ]; then
@@ -98,6 +99,17 @@ if [ ${SIM_NUM} -gt 0 ]; then
                 collect-log-instance "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" "${SIM_LOG_DIR}" "${DESTINATION}"
                 index=$(($index + 1)) 
         done
+fi
+
+if [ "${ENABLE_ADMIN_E2E}" == "true" ]; then
+        if [ ${ADMINCLIENT_NUM} -gt 0 ]; then
+                echo "Collecting logs from ${#INSTANCE_ADMINCLIENT_ZONE[@]} admin client machines: "
+                index=0
+                for zone in "${INSTANCE_ADMINCLIENT_ZONE[@]}"; do
+                        collect-log-instance "${ADMINCLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" "${CLIENT_LOG_DIR}" "${DESTINATION}"
+                        index=$(($index + 1)) 
+                done
+        fi
 fi
 
 "${GRS_ROOT}/hack/test-loganalysis.sh"

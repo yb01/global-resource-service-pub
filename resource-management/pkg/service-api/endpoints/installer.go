@@ -19,12 +19,13 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"io/ioutil"
-	"k8s.io/klog/v2"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
+	"k8s.io/klog/v2"
 
 	di "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	store "global-resource-service/resource-management/pkg/common-lib/interfaces/store"
@@ -125,7 +126,7 @@ func (i *Installer) handleClientUnRegistration(resp http.ResponseWriter, req *ht
 }
 
 func (i *Installer) NodeHandler(resp http.ResponseWriter, req *http.Request) {
-	klog.V(3).Infof("handle /resource/nodes/. URL path: %s", req.URL.Path)
+	klog.V(3).Infof("handle node query: /nodes. URL path: %s", req.URL.Path)
 
 	switch req.Method {
 	case http.MethodGet:
@@ -139,7 +140,6 @@ func (i *Installer) NodeHandler(resp http.ResponseWriter, req *http.Request) {
 			resp.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
 		node, err := i.dist.GetNodeStatus(region, resourceParition, nodeId)
 		if err == types.Error_ObjectNotFound {
 			resp.WriteHeader(http.StatusNotFound)

@@ -56,6 +56,7 @@ type RmsInterface interface {
 	Register() (*apiTypes.ClientRegistrationResponse, error)
 	List(string, ListOptions) ([]*types.LogicalNode, types.TransitResourceVersionMap, error)
 	Watch(string, types.TransitResourceVersionMap) (watch.Interface, error)
+	Query(string, string, string) (*types.LogicalNode, error)
 }
 
 // rmsClient implements RmsInterface
@@ -145,6 +146,10 @@ func (c *rmsClient) List(clientId string, opts ListOptions) ([]*types.LogicalNod
 
 	err = json.Unmarshal(respRet, &resp)
 
+	if err != nil {
+		return nil, nil, err
+	}
+
 	actualCrv := resp.ResourceVersions
 
 	return resp.NodeList, actualCrv, nil
@@ -173,4 +178,34 @@ func (c *rmsClient) Watch(clientId string, versionMap types.TransitResourceVersi
 	}
 
 	return watcher, nil
+}
+
+
+// Query Nodes, and returns Nodes that match those selectors.
+func (c *rmsClient) Query(nodeId string, regionName string, rpName string) (*types.LogicalNode, error) {
+	req := c.restClient.Get()
+	resourcePath := "nodes"
+	req = req.Resource(resourcePath)
+	req = req.Timeout(c.config.RequestTimeout)
+	req = req.Param("nodeId", nodeId)
+	req = req.Param("region", regionName)
+	req = req.Param("resourcePartition", rpName)
+	
+	respRet, err := req.DoRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := apiTypes.NodeResponse{}
+
+	err = json.Unmarshal(respRet, &resp)
+
+	if err != nil {
+		return nil, err
+	}
+
+	respNode := resp.Node
+
+	return &respNode, nil
+
 }
