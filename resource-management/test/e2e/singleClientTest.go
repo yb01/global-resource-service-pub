@@ -214,6 +214,9 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 				}
 				currentTime := time.Now().UTC()
 				watchDelay := currentTime.Sub(record.Node.LastUpdatedTime)
+
+				klog.V(6).Infof("[Metrics][Detail] node %v watch delay %v", record.Node.Id, watchDelay)
+
 				addWatchLatency(watchDelay, watchStats)
 				logIfProlonged(&record, watchDelay, watchStats)
 
@@ -266,7 +269,7 @@ func addWatchLatency(delay time.Duration, ws *stats.WatchStats) {
 
 func logIfProlonged(record *runtime.NodeEvent, delay time.Duration, ws *stats.WatchStats) {
 	if delay > stats.LongWatchThreshold {
-		klog.Warningf("Prolonged watch node from server: %v with time (%v)", record.Node.Id, delay)
+		//	klog.Warningf("Prolonged watch node from server: %v with time (%v)", record.Node.Id, delay)
 		ws.NumberOfProlongedItems++
 	}
 }
