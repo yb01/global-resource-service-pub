@@ -66,6 +66,7 @@ func AddLatencyMetricsAllCheckpoints(e *NodeEvent) {
 	serializer_sent_time := checkpointsPerEvent[metrics.Serializer_Sent]
 
 	latencyMetricsLock.Lock()
+	defer latencyMetricsLock.Unlock()
 	if !agg_received_time.IsZero() {
 		latencyMetricsAllCheckpoints.Aggregator_Received.AddLatencyMetrics(agg_received_time.Sub(lastUpdatedTime))
 	} else {
@@ -96,19 +97,13 @@ func AddLatencyMetricsAllCheckpoints(e *NodeEvent) {
 	} else {
 		klog.Errorf("Event (%v, Id %s, RV %s) does not have %s stamped", e.Type, e.Node.Id, e.Node.ResourceVersion, metrics.Serializer_Sent)
 	}
-	latencyMetricsLock.Unlock()
-
-	klog.V(9).Infof("[Metrics][Detail] node %v RV %s: %s: %v, %s: %v, %s: %v, %s: %v, %s: %v, %s: %v",
+	klog.V(6).Infof("[Metrics][Detail] node %v RV %s: %s: %v, %s: %v, %s: %v, %s: %v, %s: %v, %s: %v",
 		e.Node.Id, e.Node.ResourceVersion,
 		metrics.Aggregator_Received_Name, agg_received_time.Sub(lastUpdatedTime),
 		metrics.Distributor_Received_Name, dis_received_time.Sub(lastUpdatedTime),
 		metrics.Distributor_Sending_Name, dis_sending_time.Sub(lastUpdatedTime),
 		metrics.Distributor_Sent_Name, dis_sent_time.Sub(lastUpdatedTime),
 		metrics.Serializer_Encoded_Name, serializer_encoded_time.Sub(lastUpdatedTime),
-		metrics.Serializer_Sent_Name, serializer_sent_time.Sub(lastUpdatedTime))
-	klog.V(3).Infof("[Metrics][Detail] node %v RV %s: %s: %v, %s: %v",
-		e.Node.Id, e.Node.ResourceVersion,
-		metrics.Aggregator_Received_Name, agg_received_time.Sub(lastUpdatedTime),
 		metrics.Serializer_Sent_Name, serializer_sent_time.Sub(lastUpdatedTime))
 }
 
