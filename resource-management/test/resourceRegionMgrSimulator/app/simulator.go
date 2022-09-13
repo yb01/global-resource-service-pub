@@ -43,6 +43,8 @@ func Run(c *RegionConfig) error {
 	// Create the handlers
 	rh := handlers.NewRegionNodeEventsHander()
 
+	wh := handlers.NewWatchHandler()
+
 	// create a new serve mux and register the handlers
 	sm := mux.NewRouter().StrictSlash(true)
 
@@ -56,6 +58,9 @@ func Run(c *RegionConfig) error {
 	// For subsequent pull all mini node modified events in all RPs of one specified region
 	getRouter.HandleFunc(handlers.SubsequentPullPath, rh.SimulatorHandler)
 
+	// List resources
+	getRouter.HandleFunc(handlers.RegionlessResourcePath, wh.ResourceHandler)
+
 	// handlers for POST API
 	//
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
@@ -64,14 +69,17 @@ func Run(c *RegionConfig) error {
 	// which resource version is older than CRV in all RPs of specified region
 	postRouter.HandleFunc(handlers.PostCRVPath, rh.SimulatorHandler)
 
+	// watch for node changes
+	postRouter.HandleFunc(handlers.RegionlessResourcePath, wh.ResourceHandler)
+
 	var bindAddress = ":" + c.MasterPort
 
 	// Define HTTP Server
 	s := &http.Server{
 		Addr:         bindAddress,
 		Handler:      sm,
-		ReadTimeout:  60 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  30 * time.Minute, // hack: large time out for listing large amount of nodes without pagenition
+		WriteTimeout: 30 * time.Minute,
 	}
 
 	go func() {

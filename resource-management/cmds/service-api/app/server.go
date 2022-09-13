@@ -99,7 +99,7 @@ func Run(c *Config) error {
 	go func() {
 		defer wg.Done()
 		aggregator := aggregrator.NewAggregator(c.ResourceUrls, dist)
-		err = aggregator.Run()
+		err = aggregator.LwRun()
 	}()
 
 	if err != nil {
