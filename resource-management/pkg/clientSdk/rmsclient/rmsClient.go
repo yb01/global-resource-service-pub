@@ -40,7 +40,7 @@ type Config struct {
 	RequestTimeout              time.Duration
 	ClientFriendlyName          string
 	ClientRegion                string
-	RegionIdToWatch             int
+	RegionIdToWatch             string
 	InitialRequestTotalMachines int
 	InitialRequestRegions       []string
 }
@@ -137,7 +137,7 @@ func (c *rmsClient) List(clientId string, opts ListOptions) ([]*types.LogicalNod
 	req = req.Name(c.Id)
 	req = req.Timeout(c.config.RequestTimeout)
 	req = req.Param("limit", strconv.Itoa(opts.Limit))
-	
+
 	respRet, err := req.DoRaw()
 	if err != nil {
 		return nil, nil, err
@@ -181,7 +181,6 @@ func (c *rmsClient) Watch(clientId string, versionMap types.TransitResourceVersi
 	return watcher, nil
 }
 
-
 // Query Nodes, and returns Nodes that match those selectors.
 func (c *rmsClient) Query(nodeId string, regionName string, rpName string) (*types.LogicalNode, error) {
 	req := c.restClient.Get()
@@ -191,7 +190,7 @@ func (c *rmsClient) Query(nodeId string, regionName string, rpName string) (*typ
 	req = req.Param("nodeId", nodeId)
 	req = req.Param("region", regionName)
 	req = req.Param("resourcePartition", rpName)
-	
+
 	respRet, err := req.DoRaw()
 	if err != nil {
 		return nil, err
