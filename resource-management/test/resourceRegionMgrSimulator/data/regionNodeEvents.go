@@ -64,13 +64,13 @@ func Init(regionName string, rpNum, nodesPerRP int) {
 // Generate region node update event changes to
 // add them into RegionNodeEventsList
 //
-func MakeDataUpdate(data_pattern string, wait_time_for_make_rp_down int) {
-	go func(data_pattern string, wait_time_for_make_rp_down int) {
+func MakeDataUpdate(data_pattern string, wait_time_for_data_change_pattern int) {
+	go func(data_pattern string, wait_time_for_data_change_pattern int) {
 		switch data_pattern {
 		case "Outage":
 			for {
 				// Generate one RP down event during specfied interval
-				time.Sleep(time.Duration(wait_time_for_make_rp_down) * time.Minute)
+				time.Sleep(time.Duration(wait_time_for_data_change_pattern) * time.Minute)
 				makeOneRPDown()
 				klog.V(3).Info("Generating one RP down event is completed")
 
@@ -78,6 +78,9 @@ func MakeDataUpdate(data_pattern string, wait_time_for_make_rp_down int) {
 				klog.V(6).Info("Simulate to delay 2 hours")
 			}
 		case "Daily":
+			//Sleep time ensures schedulers complete 25K-node list before modified events are created
+			time.Sleep(time.Duration(wait_time_for_data_change_pattern) * time.Minute)
+
 			for {
 				// At each minute mark, generate 10 modified node events
 				time.Sleep(1 * time.Minute)
@@ -89,7 +92,7 @@ func MakeDataUpdate(data_pattern string, wait_time_for_make_rp_down int) {
 			klog.V(3).Infof("Current Simulator Data Pattern (%v) is supported", data_pattern)
 			return
 		}
-	}(data_pattern, wait_time_for_make_rp_down)
+	}(data_pattern, wait_time_for_data_change_pattern)
 }
 
 ///////////////////////////////////////////////
