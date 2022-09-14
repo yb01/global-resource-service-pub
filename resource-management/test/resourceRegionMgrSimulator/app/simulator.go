@@ -36,7 +36,7 @@ type RegionConfig struct {
 	RPDownNumber          int
 	MasterPort            string
 	DataPattern           string
-	WaitTimeForMakeRpDown int
+	WaitTimeForDataChangePattern int
 }
 
 func Run(c *RegionConfig) error {
