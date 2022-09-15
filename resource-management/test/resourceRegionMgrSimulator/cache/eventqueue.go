@@ -159,7 +159,7 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 		return err
 	}
 
-	eq.watchChan = make(chan *event.NodeEvent)
+	eq.watchChan = make(chan *event.NodeEvent, 10000)
 	// writing event to channel
 	go func(downstreamCh chan *event.NodeEvent, initEvents []*event.NodeEvent, stopCh chan struct{}, upstreamCh chan *event.NodeEvent) {
 		if downstreamCh == nil {
