@@ -14,13 +14,13 @@ export GRS_INSTANCE_PREFIX=[yourPreferInstanceName] SIM_NUM=5 CLIENT_NUM=2 SERVE
 export SERVER_ZONE=us-central1-a SIM_ZONE=us-central1-a,us-east1-b,us-west2-a,us-west4-a,us-west3-c CLIENT_ZONE=us-west3-b,us-east4-b
 export SIM_REGIONS="Beijing,Shanghai,Wulan,Guizhou,Reserved1" SIM_RP_NUM=10 NODES_PER_RP=20000 SCHEDULER_REQUEST_MACHINE=25000 SCHEDULER_REQUEST_LIMIT=26000 SCHEDULER_NUM=20
 ```
-2. If simulator data pattern is Daily change pattern, then set "SIM_DATA_PATTERN=Daily" 
+2. Simulator data pattern can be set seperately, total number should be same as SIM_NUM" 
 ```
-export SIM_DATA_PATTERN=Daily
+export SIM_DATA_PATTERN=Daily,Outage,Daily,Daily,Daily SIM_WAIT_DOWN_TIME=0,6,0,0,0
 ```
-3. If simulator data pattern is RP outage pattern, then set "SIM_DATA_PATTERN=Outage SIM_WAIT_DOWN_TIME=3,8,13,18,23". you can choose any time to simulate when RP is down
+1. If there is simulator data pattern is RP outage pattern, then set  SIM_DOWN_RP_NUM=0,10,0,0,0". 
 ```
-export SIM_DATA_PATTERN=Outage SIM_WAIT_DOWN_TIME=3,8,13,18,23
+export SIM_DOWN_RP_NUM=0,10,0,0,0
 ```
 4. You can disable metrics to avoid possible performance lost by set "SERVICE_EXTRA_ARGS=--enable_metrics=false"
 ```

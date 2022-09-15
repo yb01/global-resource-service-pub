@@ -236,6 +236,8 @@ fi
 
 IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; SIM_DOWN_TIME_LIST=($SIM_WAIT_DOWN_TIME); unset IFS;
+IFS=','; SIM_DATA_PATTERN_LIST=($SIM_DATA_PATTERN); unset IFS;
+IFS=','; SIM_DOWN_RP_NUM_LIST=($SIM_DOWN_RP_NUM); unset IFS;
 
 if [ ${#INSTANCE_SIM_ZONE[@]} != 1 ]; then
         if [ ${#INSTANCE_SIM_ZONE[@]} -lt ${SIM_NUM} ]; then
@@ -248,9 +250,19 @@ else
                 exit 1
         fi
 fi
+if [ ${#SIM_DATA_PATTERN_LIST[@]} -lt ${SIM_NUM} ]; then
+        echo "Simulator data pattern must be same as Simulator number, Please double check."
+        exit 1
+fi
 
-if [[ "${SIM_DATA_PATTERN}" == "Outage" && "${#SIM_DOWN_TIME_LIST[@]}" != "${SIM_NUM}" ]]; then
+
+if [[ ${#SIM_DOWN_TIME_LIST[@]} -lt ${SIM_NUM} ]]; then
         echo "The number of simulator wait time for make rp down:SIM_WAIT_DOWN_TIME must be same as Simulator number, Please double check."
+        exit 1
+fi
+
+if [[ ${#SIM_DOWN_RP_NUM_LIST[@]} -lt ${SIM_NUM} ]]; then
+        echo "The number of simulator down RP number:SIM_DOWN_RP_NUM must be same as Simulator number, Please double check."
         exit 1
 fi
 

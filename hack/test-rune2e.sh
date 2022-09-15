@@ -146,6 +146,45 @@ function get-delay-second {
   echo "${suggested_delay_second}"
 }
 
+function get-region-id {
+  local name="$1"
+  local region_id=0
+  
+  case "${name}" in
+    Beijing)
+      region_id=0
+      ;;
+    Shanghai)
+      region_id=1
+      ;;
+    Wulan)
+      region_id=2
+      ;;
+    Guizhou)
+      region_id=3
+      ;;
+    Reserved1)
+      region_id=4
+      ;;
+    Reserved2)
+      region_id=5
+      ;;
+    Reserved3)
+      region_id=6
+      ;;
+    Reserved4)
+      region_id=7
+      ;;
+    Reserved5)
+      region_id=8
+      ;;
+    *)
+      region_id=0
+      ;;
+  esac 
+  echo "${region_id}"
+}
+
 ###############
 #   main function
 ###############
@@ -155,7 +194,9 @@ IFS=','; INSTANCE_SIM_ZONE=($SIM_ZONE); unset IFS;
 IFS=','; INSTANCE_CLIENT_ZONE=($CLIENT_ZONE); unset IFS;
 IFS=','; INSTANCE_ADMINCLIENT_ZONE=($ADMINCLIENT_ZONE); unset IFS;
 IFS=','; SIM_REGION_LIST=($SIM_REGIONS); unset IFS;
+IFS=','; SIM_DATA_PATTERN_LIST=($SIM_DATA_PATTERN); unset IFS;
 IFS=','; SIM_DOWN_TIME_LIST=($SIM_WAIT_DOWN_TIME); unset IFS;
+IFS=','; SIM_DOWN_RP_NUM_LIST=($SIM_DOWN_RP_NUM); unset IFS;
 
 ###TODO
 ###using go run to start all component for now
@@ -173,6 +214,8 @@ fi
 echo "Waiting 10 seconds to get resource management service running"
 sleep 10
 
+###region name witch has outage 
+OUTAGE_REGION_NAME=""
 if [ ${SIM_NUM} -gt 0 ]; then
         if [[ "${#SIM_REGION_LIST[@]}" == "${SIM_NUM}" ]]; then
                 if [ ${#INSTANCE_SIM_ZONE[@]} == 1 ]; then
@@ -184,9 +227,10 @@ if [ ${SIM_NUM} -gt 0 ]; then
                         index=0
                         for name in "${instance_names[@]}"; do
                                 extra_args="${SIM_EXTRA_ARGS}"
-                                extra_args+=" --data_pattern=${SIM_DATA_PATTERN}"
-                                if [[ "${SIM_DATA_PATTERN}" == "Outage" &&  "${SIM_DOWN_TIME_LIST[index]}" != "" ]]; then
-                                        extra_args+=" --wait_time_for_make_rp_down=${SIM_DOWN_TIME_LIST[index]}"
+                                extra_args+=" --data_pattern=${SIM_DATA_PATTERN_LIST[index]} --wait_time_for_data_change_pattern=${SIM_DOWN_TIME_LIST[index]}"
+                                if [[ "${SIM_DATA_PATTERN_LIST[index]}" == "Outage" &&  "${SIM_DOWN_RP_NUM_LIST[index]}" != "" ]]; then
+                                        extra_args+="  --rp_down_number=${SIM_DOWN_RP_NUM_LIST[index]}"
+                                        OUTAGE_REGION_NAME+="${SIM_REGION_LIST[$index]},"
                                 fi
                                 start-simulator "${name}" "${SIM_REGION_LIST[$index]}" "${SIM_RP_NUM}" "${NODES_PER_RP}" "${SIM_PORT}" "${INSTANCE_SIM_ZONE[0]}" "${SIM_LOG_LEVEL}" "${extra_args}"
                                 index=$(($index + 1))
@@ -195,9 +239,10 @@ if [ ${SIM_NUM} -gt 0 ]; then
                         index=0
                         for zone in "${INSTANCE_SIM_ZONE[@]}"; do
                                 extra_args="${SIM_EXTRA_ARGS}"
-                                extra_args+=" --data_pattern=${SIM_DATA_PATTERN}"
-                                if [[ "${SIM_DATA_PATTERN}" == "Outage" &&  "${SIM_DOWN_TIME_LIST[index]}" != "" ]]; then
-                                        extra_args+=" --wait_time_for_make_rp_down=${SIM_DOWN_TIME_LIST[index]}"
+                                extra_args+=" --data_pattern=${SIM_DATA_PATTERN_LIST[index]} --wait_time_for_data_change_pattern=${SIM_DOWN_TIME_LIST[index]}"
+                                if [[ "${SIM_DATA_PATTERN_LIST[index]}" == "Outage" &&  "${SIM_DOWN_RP_NUM_LIST[index]}" != "" ]]; then
+                                        extra_args+="  --rp_down_number=${SIM_DOWN_RP_NUM_LIST[index]}"
+                                        OUTAGE_REGION_NAME+="${SIM_REGION_LIST[$index]},"
                                 fi
                                 start-simulator "${SIM_INSTANCE_PREFIX}-${zone}-${index}" "${SIM_REGION_LIST[$index]}" "${SIM_RP_NUM}" "${NODES_PER_RP}" "${SIM_PORT}" "${zone}" "${SIM_LOG_LEVEL}" "${extra_args}"
                                 index=$(($index + 1)) 
@@ -227,6 +272,15 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                                         done_num=$((${service_num} * ${index} ))
                                         service_num=$((${SCHEDULER_NUM} - ${done_num}))
                                 fi
+                                if [ "${OUTAGE_REGION_NAME}" != "" ]; then
+                                        region_ids=""
+                                        IFS=','; OUTAGE_REGION_NAME_LIST=($OUTAGE_REGION_NAME); unset IFS;
+                                        for region in "${OUTAGE_REGION_NAME_LIST[@]}"; do
+                                                region_ids+="$(get-region-id $region),"
+                                        done
+                                        region_ids=${region_ids%,}
+                                        CLIENT_EXTRA_ARGS=" --region_id_to_watch=${region_ids}"
+                                fi
                                 start-scheduler "${name}" "${INSTANCE_CLIENT_ZONE[0]}" "${service_num}" "${SERVICE_URL}" "${SCHEDULER_REQUEST_MACHINE}" "${SCHEDULER_REQUEST_LIMIT}"  "${CLIENT_LOG_LEVEL}" "${CLIENT_EXTRA_ARGS}"
                                 index=$(($index + 1))
                         done
@@ -237,6 +291,15 @@ if [ ${CLIENT_NUM} -gt 0 ]; then
                                 if [ $index == $((${CLIENT_NUM} - 1)) ]; then
                                         done_num=$((${service_num} * ${index} ))
                                         service_num=$((${SCHEDULER_NUM} - ${done_num}))
+                                fi
+                                if [ "${OUTAGE_REGION_NAME}" != "" ]; then
+                                        region_ids=""
+                                        IFS=','; OUTAGE_REGION_NAME_LIST=($OUTAGE_REGION_NAME); unset IFS;
+                                        for region in "${OUTAGE_REGION_NAME_LIST[@]}"; do
+                                                region_ids+="$(get-region-id $region),"
+                                        done
+                                        region_ids=${region_ids%,}
+                                        CLIENT_EXTRA_ARGS=" --region_id_to_watch=${region_ids}"
                                 fi
                                 start-scheduler "${CLIENT_INSTANCE_PREFIX}-${zone}-${index}" "${zone}" "${service_num}" "${SERVICE_URL}" "${SCHEDULER_REQUEST_MACHINE}" "${SCHEDULER_REQUEST_LIMIT}"  "${CLIENT_LOG_LEVEL}" "${CLIENT_EXTRA_ARGS}"
                                 index=$(($index + 1)) 
