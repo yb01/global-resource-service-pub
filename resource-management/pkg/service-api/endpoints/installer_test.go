@@ -184,7 +184,6 @@ func TestHTTPGetNodeStatus(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		recorder := httptest.NewRecorder()
 		installer.NodeHandler(recorder, req)
 		resp := apitypes.NodeResponse{}
