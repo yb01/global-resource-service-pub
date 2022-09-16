@@ -48,7 +48,7 @@ function grep-string {
 cd ${DESTINATION}
 
 echo "Collecting scheduler test summary to csv"
-echo "file name","RegisterClientDuration","ListDuration","Number of nodes listed","Watch session last","Number of nodes Added","Updated","Deleted","watch prolonged than 1s","Watch perc50","Watch perc90","Watch perc99">> ./csv/${csv_name}
+echo "file name","RegisterClientDuration","ListDuration","Number of nodes listed","Watch session last","Number of nodes Added","Updated","Deleted","watch prolonged than 1s","Watch perc50","Watch perc90","Watch perc99", "Throughput-Duration", "Throughput-Eventcount" >> ./csv/${csv_name}
 for name in $( ls | grep client);do
   start_string="RegisterClientDuration: "
   end_string=""
@@ -94,7 +94,15 @@ for name in $( ls | grep client);do
   end_string=". Total"
   watch_perc99=$(grep-string "${name}" "${start_string}" "${end_string}")
 
-  echo "${name}","${register_client_duration}","${list_duration}","${nodes_listed}","${watch_session_last}","${number_nodes_added}","${number_nodes_updated}","${number_nodes_deleted}","${watch_prolonged_than1s}","${watch_perc50}","${watch_perc90}","${watch_perc99}" >> ./csv/${csv_name}
+  start_string=". Duration"
+  end_string=". Event count"
+  thp_duration=$(grep-string "${name}" "${start_string}" "${end_string}")
+
+  start_string=". Event count"
+  end_string=""
+  thp_eventcount=$(grep-string "${name}" "${start_string}" "${end_string}")
+
+  echo "${name}","${register_client_duration}","${list_duration}","${nodes_listed}","${watch_session_last}","${number_nodes_added}","${number_nodes_updated}","${number_nodes_deleted}","${watch_prolonged_than1s}","${watch_perc50}","${watch_perc90}","${watch_perc99}","${thp_duration}","${thp_eventcount}" >> ./csv/${csv_name}
 done
 
 ###adding empty line to csv
