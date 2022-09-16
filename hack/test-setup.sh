@@ -352,8 +352,8 @@ if [ "${ENABLE_ADMIN_E2E}" == "true" ]; then
 fi
 
  
-echo "Waiting 60 seconds to get all resource started"
-sleep 60
+echo "Waiting 90 seconds to get all resource started"
+sleep 90
 
 RESOURCE_URLS=""
 MASTER_IP=""
