@@ -62,3 +62,11 @@ func (e *NodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoin
 func (e *NodeEvent) GetCheckpoints() []time.Time {
 	return e.checkpoints
 }
+
+func (e *NodeEvent) GetResourceVersionInt64() uint64 {
+	return e.Node.GetResourceVersionInt64()
+}
+
+func (e *NodeEvent) GetGeoInfo() types.NodeGeoInfo {
+	return e.Node.GeoInfo
+}

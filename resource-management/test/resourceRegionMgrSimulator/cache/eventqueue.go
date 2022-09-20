@@ -18,12 +18,14 @@ package cache
 
 import (
 	"errors"
-	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 	"k8s.io/klog/v2"
 	"sync"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
+	objectcache "global-resource-service/resource-management/pkg/common-lib/types/cache"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
+	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 )
 
 type NodeEventQueue struct {
@@ -32,17 +34,17 @@ type NodeEventQueue struct {
 	// used to lock enqueue operation during snapshot
 	enqueueLock sync.RWMutex
 
-	eventQueueByRP []*nodeEventQueueByRP
+	eventQueueByRP []*objectcache.EventQueue
 }
 
 func NewNodeEventQueue(resourcePartitionNum int) *NodeEventQueue {
 	queue := &NodeEventQueue{
-		eventQueueByRP: make([]*nodeEventQueueByRP, resourcePartitionNum),
+		eventQueueByRP: make([]*objectcache.EventQueue, resourcePartitionNum),
 		enqueueLock:    sync.RWMutex{},
 	}
 
 	for i := 0; i < resourcePartitionNum; i++ {
-		queue.eventQueueByRP[i] = newNodeQueueByRP()
+		queue.eventQueueByRP[i] = objectcache.NewEventQueue()
 	}
 
 	return queue
@@ -65,10 +67,10 @@ func (eq *NodeEventQueue) EnqueueEvent(e *event.NodeEvent) {
 		}()
 	}
 
-	eq.eventQueueByRP[e.Node.GeoInfo.ResourcePartition].enqueueEvent(e)
+	eq.eventQueueByRP[e.Node.GeoInfo.ResourcePartition].EnqueueEvent(e)
 }
 
-func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatchChan chan *event.NodeEvent, stopCh chan struct{}) error {
+func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatchChan chan runtime.Object, stopCh chan struct{}) error {
 	if eq.watchChan != nil {
 		return errors.New("currently only support one watcher per node event queue")
 	}
@@ -81,7 +83,7 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 
 	eq.watchChan = make(chan *event.NodeEvent)
 	// writing event to channel
-	go func(downstreamCh chan *event.NodeEvent, initEvents []*event.NodeEvent, stopCh chan struct{}, upstreamCh chan *event.NodeEvent) {
+	go func(downstreamCh chan runtime.Object, initEvents []runtime.Object, stopCh chan struct{}, upstreamCh chan *event.NodeEvent) {
 		if downstreamCh == nil {
 			return
 		}
@@ -112,12 +114,12 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 	return nil
 }
 
-func (eq *NodeEventQueue) getAllEventsSinceResourceVersion(rvs types.InternalResourceVersionMap) ([]*event.NodeEvent, error) {
+func (eq *NodeEventQueue) getAllEventsSinceResourceVersion(rvs types.InternalResourceVersionMap) ([]runtime.Object, error) {
 	locStartPostitions := make([]int, config.RpNum)
 
 	for loc, rv := range rvs {
 		qByRP := eq.eventQueueByRP[loc.GetResourcePartition()]
-		startIndex, err := qByRP.getEventIndexSinceResourceVersion(rv)
+		startIndex, err := qByRP.GetEventIndexSinceResourceVersion(rv)
 		if err != nil {
 			if err == types.Error_EndOfEventQueue {
 				return nil, nil
@@ -127,10 +129,10 @@ func (eq *NodeEventQueue) getAllEventsSinceResourceVersion(rvs types.InternalRes
 		locStartPostitions[loc.GetResourcePartition()] = startIndex
 	}
 
-	nodeEvents := make([]*event.NodeEvent, 0)
+	nodeEvents := make([]runtime.Object, 0)
 	for rp, qByRP := range eq.eventQueueByRP {
 		startIndex := locStartPostitions[rp]
-		events, err := qByRP.getEventsFromIndex(startIndex)
+		events, err := qByRP.GetEventsFromIndex(startIndex)
 		if err != nil {
 			return nil, err
 		}

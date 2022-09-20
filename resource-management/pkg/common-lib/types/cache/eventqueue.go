@@ -28,7 +28,7 @@ import (
 const LengthOfEventQueue = 10000
 
 type EventQueue struct {
-	circularEventQueue []*runtime.Object
+	circularEventQueue []runtime.Object
 	// circular event queue start position and end position
 	startPos int
 	endPos   int
@@ -39,14 +39,14 @@ type EventQueue struct {
 
 func NewEventQueue() *EventQueue {
 	return &EventQueue{
-		circularEventQueue: make([]*runtime.Object, LengthOfEventQueue),
+		circularEventQueue: make([]runtime.Object, LengthOfEventQueue),
 		startPos:           0,
 		endPos:             0,
 		eqLock:             sync.RWMutex{},
 	}
 }
 
-func (q *EventQueue) enqueueEvent(e *runtime.Object) {
+func (q *EventQueue) EnqueueEvent(e runtime.Object) {
 	q.eqLock.Lock()
 	defer q.eqLock.Unlock()
 
@@ -59,7 +59,7 @@ func (q *EventQueue) enqueueEvent(e *runtime.Object) {
 	q.endPos++
 }
 
-func (q *EventQueue) getEventsFromIndex(startIndex int) ([]*runtime.Object, error) {
+func (q *EventQueue) GetEventsFromIndex(startIndex int) ([]runtime.Object, error) {
 	q.eqLock.RLock()
 	defer q.eqLock.RUnlock()
 
@@ -68,7 +68,7 @@ func (q *EventQueue) getEventsFromIndex(startIndex int) ([]*runtime.Object, erro
 	}
 
 	length := q.endPos - startIndex
-	result := make([]*runtime.Object, length)
+	result := make([]runtime.Object, length)
 	for i := 0; i < length; i++ {
 		result[i] = q.circularEventQueue[(startIndex+i)%LengthOfEventQueue]
 	}
@@ -76,13 +76,13 @@ func (q *EventQueue) getEventsFromIndex(startIndex int) ([]*runtime.Object, erro
 	return result, nil
 }
 
-func (q *EventQueue) getEventIndexSinceResourceVersion(resourceVersion uint64) (int, error) {
+func (q *EventQueue) GetEventIndexSinceResourceVersion(resourceVersion uint64) (int, error) {
 	q.eqLock.RLock()
 	defer q.eqLock.RUnlock()
 	if q.endPos-q.startPos == 0 {
 		return -1, errors.New(fmt.Sprintf("Empty event queue"))
 	}
-	e := *q.circularEventQueue[q.startPos%LengthOfEventQueue]
+	e := q.circularEventQueue[q.startPos%LengthOfEventQueue]
 
 	oldestRV := e.GetResourceVersionInt64()
 	if oldestRV > resourceVersion {
@@ -91,7 +91,7 @@ func (q *EventQueue) getEventIndexSinceResourceVersion(resourceVersion uint64) (
 	}
 
 	index := sort.Search(q.endPos-q.startPos, func(i int) bool {
-		return (*q.circularEventQueue[(q.startPos+i)%LengthOfEventQueue]).GetResourceVersionInt64() > resourceVersion
+		return q.circularEventQueue[(q.startPos+i)%LengthOfEventQueue].GetResourceVersionInt64() > resourceVersion
 	})
 	index += q.startPos
 	if index == q.endPos {
