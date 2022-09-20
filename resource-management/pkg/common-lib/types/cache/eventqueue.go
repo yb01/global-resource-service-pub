@@ -20,13 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"sort"
 	"sync"
 )
 
-const LengthOfNodeEventQueue = 10000
+const LengthOfEventQueue = 10000
 
 type EventQueue struct {
 	circularEventQueue []*runtime.Object
@@ -40,27 +39,27 @@ type EventQueue struct {
 
 func NewEventQueue() *EventQueue {
 	return &EventQueue{
-		circularEventQueue: make([]*event.NodeEvent, LengthOfNodeEventQueue),
+		circularEventQueue: make([]*runtime.Object, LengthOfEventQueue),
 		startPos:           0,
 		endPos:             0,
 		eqLock:             sync.RWMutex{},
 	}
 }
 
-func (q *EventQueue) enqueueEvent(e *event.NodeEvent) {
+func (q *EventQueue) enqueueEvent(e *runtime.Object) {
 	q.eqLock.Lock()
 	defer q.eqLock.Unlock()
 
-	if q.endPos == q.startPos+LengthOfNodeEventQueue {
+	if q.endPos == q.startPos+LengthOfEventQueue {
 		// cache is full - remove the oldest element
 		q.startPos++
 	}
 
-	q.circularEventQueue[q.endPos%LengthOfNodeEventQueue] = e
+	q.circularEventQueue[q.endPos%LengthOfEventQueue] = e
 	q.endPos++
 }
 
-func (q *EventQueue) getEventsFromIndex(startIndex int) ([]*event.NodeEvent, error) {
+func (q *EventQueue) getEventsFromIndex(startIndex int) ([]*runtime.Object, error) {
 	q.eqLock.RLock()
 	defer q.eqLock.RUnlock()
 
@@ -69,9 +68,9 @@ func (q *EventQueue) getEventsFromIndex(startIndex int) ([]*event.NodeEvent, err
 	}
 
 	length := q.endPos - startIndex
-	result := make([]*event.NodeEvent, length)
+	result := make([]*runtime.Object, length)
 	for i := 0; i < length; i++ {
-		result[i] = q.circularEventQueue[(startIndex+i)%LengthOfNodeEventQueue]
+		result[i] = q.circularEventQueue[(startIndex+i)%LengthOfEventQueue]
 	}
 
 	return result, nil
@@ -83,16 +82,16 @@ func (q *EventQueue) getEventIndexSinceResourceVersion(resourceVersion uint64) (
 	if q.endPos-q.startPos == 0 {
 		return -1, errors.New(fmt.Sprintf("Empty event queue"))
 	}
-	nodeEvent := q.circularEventQueue[q.startPos%LengthOfNodeEventQueue].Node
+	e := *q.circularEventQueue[q.startPos%LengthOfEventQueue]
 
-	oldestRV := nodeEvent.GetResourceVersionInt64()
+	oldestRV := e.GetResourceVersionInt64()
 	if oldestRV > resourceVersion {
 		return -1, errors.New(fmt.Sprintf("Resource Partition %s events oldest resource Version %d is newer than requested resource version %d",
-			nodeEvent.GeoInfo.ResourcePartition, oldestRV, resourceVersion))
+			e.GetGeoInfo().ResourcePartition, oldestRV, resourceVersion))
 	}
 
 	index := sort.Search(q.endPos-q.startPos, func(i int) bool {
-		return q.circularEventQueue[(q.startPos+i)%LengthOfNodeEventQueue].Node.GetResourceVersionInt64() > resourceVersion
+		return (*q.circularEventQueue[(q.startPos+i)%LengthOfEventQueue]).GetResourceVersionInt64() > resourceVersion
 	})
 	index += q.startPos
 	if index == q.endPos {
