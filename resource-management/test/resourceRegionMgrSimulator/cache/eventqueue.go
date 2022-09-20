@@ -18,93 +18,13 @@ package cache
 
 import (
 	"errors"
-	"fmt"
 	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 	"k8s.io/klog/v2"
-	"sort"
 	"sync"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
-
-const LengthOfNodeEventQueue = 10000
-
-type nodeEventQueueByRP struct {
-	circularEventQueue []*event.NodeEvent
-	// circular event queue start position and end position
-	startPos int
-	endPos   int
-
-	// mutex for event queue operation
-	eqLock sync.RWMutex
-}
-
-func newNodeQueueByRP() *nodeEventQueueByRP {
-	return &nodeEventQueueByRP{
-		circularEventQueue: make([]*event.NodeEvent, LengthOfNodeEventQueue),
-		startPos:           0,
-		endPos:             0,
-		eqLock:             sync.RWMutex{},
-	}
-}
-
-func (q *nodeEventQueueByRP) enqueueEvent(e *event.NodeEvent) {
-	q.eqLock.Lock()
-	defer q.eqLock.Unlock()
-
-	if q.endPos == q.startPos+LengthOfNodeEventQueue {
-		// cache is full - remove the oldest element
-		q.startPos++
-	}
-
-	q.circularEventQueue[q.endPos%LengthOfNodeEventQueue] = e
-	q.endPos++
-}
-
-func (q *nodeEventQueueByRP) getEventsFromIndex(startIndex int) ([]*event.NodeEvent, error) {
-	q.eqLock.RLock()
-	defer q.eqLock.RUnlock()
-
-	if q.startPos == q.endPos || q.startPos > startIndex || startIndex > q.endPos { // queue is empty or out of range
-		return nil, errors.New(fmt.Sprintf("Event queue start pos %d, end pos %d, invalid start index %d", q.startPos, q.endPos, startIndex))
-	}
-
-	length := q.endPos - startIndex
-	result := make([]*event.NodeEvent, length)
-	for i := 0; i < length; i++ {
-		result[i] = q.circularEventQueue[(startIndex+i)%LengthOfNodeEventQueue]
-	}
-
-	return result, nil
-}
-
-func (q *nodeEventQueueByRP) getEventIndexSinceResourceVersion(resourceVersion uint64) (int, error) {
-	q.eqLock.RLock()
-	defer q.eqLock.RUnlock()
-	if q.endPos-q.startPos == 0 {
-		return -1, errors.New(fmt.Sprintf("Empty event queue"))
-	}
-	nodeEvent := q.circularEventQueue[q.startPos%LengthOfNodeEventQueue].Node
-
-	oldestRV := nodeEvent.GetResourceVersionInt64()
-	if oldestRV > resourceVersion {
-		return -1, errors.New(fmt.Sprintf("Resource Partition %s events oldest resource Version %d is newer than requested resource version %d",
-			nodeEvent.GeoInfo.ResourcePartition, oldestRV, resourceVersion))
-	}
-
-	index := sort.Search(q.endPos-q.startPos, func(i int) bool {
-		return q.circularEventQueue[(q.startPos+i)%LengthOfNodeEventQueue].Node.GetResourceVersionInt64() > resourceVersion
-	})
-	index += q.startPos
-	if index == q.endPos {
-		return -1, types.Error_EndOfEventQueue
-	}
-	if index > q.endPos || index < q.startPos {
-		return -1, errors.New(fmt.Sprintf("Event queue start pos %d, end pos %d, found invalid start index %d", q.startPos, q.endPos, index))
-	}
-	return index, nil
-}
 
 type NodeEventQueue struct {
 	watchChan chan *event.NodeEvent
