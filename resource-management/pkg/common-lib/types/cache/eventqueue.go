@@ -19,10 +19,11 @@ package cache
 import (
 	"errors"
 	"fmt"
-	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"sort"
 	"sync"
+
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
 const LengthOfEventQueue = 10000
@@ -101,4 +102,8 @@ func (q *EventQueue) GetEventIndexSinceResourceVersion(resourceVersion uint64) (
 		return -1, errors.New(fmt.Sprintf("Event queue start pos %d, end pos %d, found invalid start index %d", q.startPos, q.endPos, index))
 	}
 	return index, nil
+}
+
+func (q *EventQueue) GetStartPos() int {
+	return q.startPos
 }
