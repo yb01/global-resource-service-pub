@@ -107,3 +107,7 @@ func (q *EventQueue) GetEventIndexSinceResourceVersion(resourceVersion uint64) (
 func (q *EventQueue) GetStartPos() int {
 	return q.startPos
 }
+
+func (q *EventQueue) GetEndPos() int {
+	return q.endPos
+}

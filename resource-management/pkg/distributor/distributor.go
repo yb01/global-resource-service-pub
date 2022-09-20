@@ -19,6 +19,7 @@ package distributor
 import (
 	"errors"
 	"fmt"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"k8s.io/klog/v2"
 	"sync"
 
@@ -242,7 +243,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Lo
 	return nodes, finalRVs, nil
 }
 
-func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error {
+func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResourceVersionMap, watchChan chan runtime.Object, stopCh chan struct{}) error {
 	var nodeEventQueue *cache.NodeEventQueue
 	var isOK bool
 	if nodeEventQueue, isOK = dis.nodeEventQueueMap[clientId]; !isOK || nodeEventQueue == nil {

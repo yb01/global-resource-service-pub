@@ -70,3 +70,7 @@ func (e *NodeEvent) GetResourceVersionInt64() uint64 {
 func (e *NodeEvent) GetGeoInfo() types.NodeGeoInfo {
 	return e.Node.GeoInfo
 }
+
+func (e *NodeEvent) GetEventType() EventType {
+	return e.Type
+}

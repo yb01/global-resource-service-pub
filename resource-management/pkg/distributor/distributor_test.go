@@ -19,6 +19,7 @@ package distributor
 import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"k8s.io/klog/v2"
 	"strconv"
 	"sync"
@@ -438,7 +439,7 @@ func TestRegistrationWorkflow(t *testing.T) {
 	assert.Equal(t, oldNodeRV, nodes[0].GetResourceVersionInt64(), "Expecting listed nodes are snapshoted and cannot be affected by update")
 
 	// client watch node update
-	watchCh := make(chan *event.NodeEvent)
+	watchCh := make(chan runtime.Object)
 	stopCh := make(chan struct{})
 	err = distributor.Watch(clientId, latestRVs, watchCh, stopCh)
 	if err != nil {
@@ -447,8 +448,8 @@ func TestRegistrationWorkflow(t *testing.T) {
 	}
 	watchedEventCount := 0
 	for e := range watchCh {
-		assert.Equal(t, event.Modified, e.Type)
-		nodeLoc := types.RvLocation{Region: location.Region(e.Node.GeoInfo.Region), Partition: location.ResourcePartition(e.Node.GeoInfo.ResourcePartition)}
+		assert.Equal(t, event.Modified, e.GetEventType())
+		nodeLoc := types.RvLocation{Region: location.Region(e.GetGeoInfo().Region), Partition: location.ResourcePartition(e.GetGeoInfo().ResourcePartition)}
 
 		assert.Equal(t, loc, nodeLoc)
 		watchedEventCount++
@@ -594,7 +595,7 @@ func TestWatchRenewal(t *testing.T) {
 	loc := location.NewLocation(location.Region(nodes[0].GeoInfo.Region), location.ResourcePartition(nodes[0].GeoInfo.ResourcePartition))
 
 	// client watch node update
-	watchCh := make(chan *event.NodeEvent)
+	watchCh := make(chan runtime.Object)
 	stopCh := make(chan struct{})
 	err = distributor.Watch(clientId, latestRVs, watchCh, stopCh)
 	if err != nil {
@@ -604,7 +605,7 @@ func TestWatchRenewal(t *testing.T) {
 
 	wgForWatchEvent := new(sync.WaitGroup)
 	wgForWatchEvent.Add(1)
-	lastRVWatched := new(int)
+	lastRVWatched := new(uint64)
 	watchedEventCount := new(int)
 	*watchedEventCount = 0
 	watch(t, wgForWatchEvent, lastRVWatched, watchedEventCount, len(nodes), watchCh, loc)
@@ -625,7 +626,7 @@ func TestWatchRenewal(t *testing.T) {
 	t.Logf("Watch renewal .....................")
 	close(stopCh)
 	time.Sleep(100 * time.Millisecond) // note here sleep is necessary. otherwise previous watch channel was not successfully discarded
-	watchCh2 := make(chan *event.NodeEvent)
+	watchCh2 := make(chan runtime.Object)
 	stopCh2 := make(chan struct{})
 	err = distributor.Watch(clientId, rvMap2, watchCh2, stopCh2)
 	if err != nil {
@@ -635,7 +636,7 @@ func TestWatchRenewal(t *testing.T) {
 
 	wgForWatchEvent2 := new(sync.WaitGroup)
 	wgForWatchEvent2.Add(1)
-	lastRVWatched2 := new(int)
+	lastRVWatched2 := new(uint64)
 	watchedEventCount2 := new(int)
 	*watchedEventCount2 = 0
 	watch(t, wgForWatchEvent2, lastRVWatched2, watchedEventCount2, len(nodes), watchCh2, loc)
@@ -653,16 +654,16 @@ func TestWatchRenewal(t *testing.T) {
 	t.Logf("Latest rvs after updates: %v\n", rvMap3)
 }
 
-func watch(t *testing.T, wg *sync.WaitGroup, lastRVResult *int, watchedEventCount *int, expectedEventCount int, watchCh chan *event.NodeEvent, loc *location.Location) {
-	go func(wg *sync.WaitGroup, t *testing.T, lastRVResult *int, watchedEventCount *int, expectedEventCount int) {
-		lastRV := int(0)
+func watch(t *testing.T, wg *sync.WaitGroup, lastRVResult *uint64, watchedEventCount *int, expectedEventCount int, watchCh chan runtime.Object, loc *location.Location) {
+	go func(wg *sync.WaitGroup, t *testing.T, lastRVResult *uint64, watchedEventCount *int, expectedEventCount int) {
+		lastRV := uint64(0)
 		for e := range watchCh {
-			assert.Equal(t, event.Modified, e.Type)
-			nodeLoc := location.NewLocation(location.Region(e.Node.GeoInfo.Region), location.ResourcePartition(e.Node.GeoInfo.ResourcePartition))
+			assert.Equal(t, event.Modified, e.GetEventType())
+			nodeLoc := location.NewLocation(location.Region(e.GetGeoInfo().Region), location.ResourcePartition(e.GetGeoInfo().ResourcePartition))
 			assert.Equal(t, loc, nodeLoc)
 			*watchedEventCount++
 
-			newRV, _ := strconv.Atoi(e.Node.ResourceVersion)
+			newRV := e.GetResourceVersionInt64()
 			if newRV < lastRV {
 				t.Logf("Got event with rv %d later than rv %d", newRV, lastRV)
 			} else {

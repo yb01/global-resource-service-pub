@@ -16,9 +16,13 @@ limitations under the License.
 
 package runtime
 
-import "global-resource-service/resource-management/pkg/common-lib/types"
+import (
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/event"
+)
 
 type Object interface {
 	GetResourceVersionInt64() uint64
 	GetGeoInfo() types.NodeGeoInfo
+	GetEventType() event.EventType
 }

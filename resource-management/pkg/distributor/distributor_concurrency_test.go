@@ -27,6 +27,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
 func TestSingleRPMutipleClients_Workflow(t *testing.T) {
@@ -137,7 +138,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			allWaitGroup := new(sync.WaitGroup)
 			start = time.Now()
 			for i := 0; i < tt.clientNum; i++ {
-				watchCh := make(chan *event.NodeEvent)
+				watchCh := make(chan runtime.Object)
 				err := distributor.Watch(clientIds[i], latestRVsByClient[i], watchCh, stopCh)
 				if err != nil {
 					assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
@@ -145,11 +146,11 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 				}
 				allWaitGroup.Add(1)
 
-				go func(expectedEventCount int, watchCh chan *event.NodeEvent, wg *sync.WaitGroup) {
+				go func(expectedEventCount int, watchCh chan runtime.Object, wg *sync.WaitGroup) {
 					eventCount := 0
 
 					for e := range watchCh {
-						assert.Equal(t, event.Modified, e.Type)
+						assert.Equal(t, event.Modified, e.GetEventType())
 						eventCount++
 
 						if eventCount >= expectedEventCount {
@@ -324,7 +325,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			allWaitGroup := new(sync.WaitGroup)
 			start = time.Now()
 			for i := 0; i < tt.clientNum; i++ {
-				watchCh := make(chan *event.NodeEvent)
+				watchCh := make(chan runtime.Object)
 				stopCh := make(chan struct{})
 				err := distributor.Watch(clientIds[i], latestRVsByClient[i], watchCh, stopCh)
 				if err != nil {
@@ -333,11 +334,11 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 				}
 				allWaitGroup.Add(1)
 
-				go func(expectedEventCount int, watchCh chan *event.NodeEvent, wg *sync.WaitGroup) {
+				go func(expectedEventCount int, watchCh chan runtime.Object, wg *sync.WaitGroup) {
 					eventCount := 0
 
 					for e := range watchCh {
-						assert.Equal(t, event.Modified, e.Type)
+						assert.Equal(t, event.Modified, e.GetEventType())
 						eventCount++
 
 						if eventCount >= expectedEventCount {
