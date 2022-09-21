@@ -25,4 +25,5 @@ type Object interface {
 	GetResourceVersionInt64() uint64
 	GetGeoInfo() types.NodeGeoInfo
 	GetEventType() event.EventType
+	GetId() string
 }

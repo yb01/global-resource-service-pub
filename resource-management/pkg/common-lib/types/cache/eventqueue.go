@@ -87,7 +87,7 @@ func (q *EventQueue) GetEventIndexSinceResourceVersion(resourceVersion uint64) (
 
 	oldestRV := e.GetResourceVersionInt64()
 	if oldestRV > resourceVersion {
-		return -1, errors.New(fmt.Sprintf("Resource Partition %s events oldest resource Version %d is newer than requested resource version %d",
+		return -1, errors.New(fmt.Sprintf("Resource Partition %v events oldest resource Version %d is newer than requested resource version %d",
 			e.GetGeoInfo().ResourcePartition, oldestRV, resourceVersion))
 	}
 
