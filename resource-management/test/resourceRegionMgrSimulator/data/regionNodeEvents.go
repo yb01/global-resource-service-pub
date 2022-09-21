@@ -18,7 +18,6 @@ package data
 
 import (
 	"errors"
-	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 	"math/rand"
 	"strconv"
 	"time"
@@ -29,8 +28,9 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
-
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/cache"
+	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 	simulatorTypes "global-resource-service/resource-management/test/resourceRegionMgrSimulator/types"
 )
 
@@ -125,7 +125,7 @@ func ListNodes() (simulatorTypes.RegionNodeEvents, uint64, types.TransitResource
 // Return region node modified events with CRVs in BATCH LENGTH from all RPs
 // TO DO: paginate support
 //
-func Watch(rvs types.TransitResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error {
+func Watch(rvs types.TransitResourceVersionMap, watchChan chan runtime.Object, stopCh chan struct{}) error {
 	if rvs == nil {
 		return errors.New("Invalid resource versions: nil")
 	}

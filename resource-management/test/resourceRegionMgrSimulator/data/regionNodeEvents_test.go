@@ -18,6 +18,7 @@ package data
 
 import (
 	"github.com/stretchr/testify/assert"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"sync"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	t.Logf("List %v nodes, duration %v, return RVS %v.", count, duration, rvs)
 
 	// Watch node events
-	watchCh := make(chan *event.NodeEvent)
+	watchCh := make(chan runtime.Object)
 	stopCh := make(chan struct{})
 	err := Watch(rvs, watchCh, stopCh)
 	if err != nil {
@@ -79,7 +80,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	t.Logf("Watch %d events succeed!\n", updateEventCount)
 
 	// watch from previous resource versions again
-	watchCh = make(chan *event.NodeEvent)
+	watchCh = make(chan runtime.Object)
 	stopCh = make(chan struct{})
 	err = Watch(rvs, watchCh, stopCh)
 	if err != nil {
@@ -98,7 +99,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	t.Logf("Re-watch %d events succeed! Duration %v\n", updateEventCount, duration)
 
 	// Test RP down event watches
-	watchCh = make(chan *event.NodeEvent)
+	watchCh = make(chan runtime.Object)
 	stopCh = make(chan struct{})
 	err = Watch(rvs, watchCh, stopCh)
 	if err != nil {
@@ -114,18 +115,18 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	t.Logf("RP down test: Watch %d events succeed!\n", config.NodesPerRP+atEachMin10)
 }
 
-func runWatch(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, stopCh chan struct{}, wg *sync.WaitGroup) {
-	go func(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan *event.NodeEvent, stopCh chan struct{}, wg *sync.WaitGroup) {
+func runWatch(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan runtime.Object, stopCh chan struct{}, wg *sync.WaitGroup) {
+	go func(t *testing.T, expectedEventCount int, rvs types.TransitResourceVersionMap, watchCh chan runtime.Object, stopCh chan struct{}, wg *sync.WaitGroup) {
 		eventCount := 0
 
 		for e := range watchCh {
-			assert.Equal(t, event.Modified, e.Type)
+			assert.Equal(t, event.Modified, e.GetEventType())
 			loc := types.RvLocation{
 				Region:    location.Beijing,
-				Partition: location.ResourcePartition(e.Node.GeoInfo.ResourcePartition),
+				Partition: location.ResourcePartition(e.GetGeoInfo().ResourcePartition),
 			}
 			requestedRVForRP := rvs[loc]
-			assert.True(t, requestedRVForRP < e.Node.GetResourceVersionInt64())
+			assert.True(t, requestedRVForRP < e.GetResourceVersionInt64())
 
 			eventCount++
 
