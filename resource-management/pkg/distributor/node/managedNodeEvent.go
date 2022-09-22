@@ -17,9 +17,12 @@ limitations under the License.
 package node
 
 import (
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"k8s.io/klog/v2"
+	"time"
 )
 
 // TODO - add more fields for minimal node record
@@ -66,4 +69,17 @@ func (n *ManagedNodeEvent) GetNodeEvent() *event.NodeEvent {
 
 func (n *ManagedNodeEvent) CopyNode() *types.LogicalNode {
 	return n.nodeEvent.Node.Copy()
+}
+
+func (n *ManagedNodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoint) {
+	klog.Error("Not implemented SetCheckpoint method")
+}
+
+func (e *ManagedNodeEvent) GetCheckpoints() []time.Time {
+	klog.Error("Not implemented GetCheckpoints method")
+	return nil
+}
+
+func (n *ManagedNodeEvent) GetLastUpdatedTime() time.Time {
+	return n.nodeEvent.Node.LastUpdatedTime
 }

@@ -17,8 +17,11 @@ limitations under the License.
 package runtime
 
 import (
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"time"
 )
 
 type Object interface {
@@ -26,4 +29,9 @@ type Object interface {
 	GetGeoInfo() types.NodeGeoInfo
 	GetEventType() event.EventType
 	GetId() string
+	GetLocation() *location.Location
+	GetLastUpdatedTime() time.Time
+
+	SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoint)
+	GetCheckpoints() []time.Time
 }

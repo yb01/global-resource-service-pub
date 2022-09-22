@@ -17,6 +17,7 @@ limitations under the License.
 package event
 
 import (
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
@@ -77,4 +78,12 @@ func (e NodeEvent) GetId() string {
 
 func (e NodeEvent) GetEventType() EventType {
 	return e.Type
+}
+
+func (n *NodeEvent) GetLocation() *location.Location {
+	return location.NewLocation(location.Region(n.Node.GeoInfo.Region), location.ResourcePartition(n.Node.GeoInfo.ResourcePartition))
+}
+
+func (n *NodeEvent) GetLastUpdatedTime() time.Time {
+	return n.Node.LastUpdatedTime
 }

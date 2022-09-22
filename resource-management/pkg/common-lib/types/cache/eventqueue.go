@@ -19,10 +19,13 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"k8s.io/klog/v2"
 	"sort"
 	"sync"
 
+	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
@@ -110,4 +113,132 @@ func (q *EventQueue) GetStartPos() int {
 
 func (q *EventQueue) GetEndPos() int {
 	return q.endPos
+}
+
+type EventQueuesByLocation struct {
+	watchChan chan runtime.Object
+
+	// used to lock enqueue operation during snapshot
+	enqueueLock sync.RWMutex
+
+	eventQueueByLoc map[location.Location]*EventQueue
+	locationLock    sync.RWMutex
+}
+
+func NewEventQueuesByLocation() *EventQueuesByLocation {
+	return &EventQueuesByLocation{
+		eventQueueByLoc: make(map[location.Location]*EventQueue),
+	}
+}
+
+func (eq *EventQueuesByLocation) AcquireSnapshotRLock() {
+	eq.enqueueLock.RLock()
+}
+
+func (eq *EventQueuesByLocation) ReleaseSnapshotRLock() {
+	eq.enqueueLock.RUnlock()
+}
+
+func (eq *EventQueuesByLocation) EnqueueEvent(e runtime.Object) {
+	eq.enqueueLock.Lock()
+	defer eq.enqueueLock.Unlock()
+	if eq.watchChan != nil {
+		go func() {
+			eq.watchChan <- e
+		}()
+	}
+
+	eq.locationLock.Lock()
+	defer eq.locationLock.Unlock()
+	queueByLoc, isOK := eq.eventQueueByLoc[*e.GetLocation()]
+	if !isOK {
+		queueByLoc = NewEventQueue()
+		eq.eventQueueByLoc[*e.GetLocation()] = queueByLoc
+	}
+	queueByLoc.EnqueueEvent(e)
+}
+
+func (eq *EventQueuesByLocation) Watch(rvs types.InternalResourceVersionMap, clientWatchChan chan runtime.Object, stopCh chan struct{}) error {
+	if eq.watchChan != nil {
+		return errors.New("currently only support one watcher per object event queue")
+	}
+
+	// get events already in queues
+	events, err := eq.getAllEventsSinceResourceVersion(rvs)
+	if err != nil {
+		return err
+	}
+
+	eq.watchChan = make(chan runtime.Object)
+	// writing event to channel
+	go func(downstreamCh chan runtime.Object, initEvents []runtime.Object, stopCh chan struct{}, upstreamCh chan runtime.Object) {
+		if downstreamCh == nil {
+			return
+		}
+		// send init events
+		for i := 0; i < len(initEvents); i++ {
+			downstreamCh <- initEvents[i]
+		}
+
+		// continue to watch
+		for {
+			select {
+			case <-stopCh:
+				eq.watchChan = nil
+				klog.V(3).Infof("Watch stopped due to client request")
+				return
+			case event, ok := <-upstreamCh:
+				if !ok {
+					break
+				}
+				klog.V(9).Infof("Sending event with object id %v", event.GetId())
+				event.SetCheckpoint(metrics.Distributor_Sending)
+				downstreamCh <- event
+				event.SetCheckpoint(metrics.Distributor_Sent)
+				klog.V(9).Infof("Event with object id %v sent", event.GetId())
+			}
+		}
+
+	}(clientWatchChan, events, stopCh, eq.watchChan)
+
+	return nil
+}
+
+func (eq *EventQueuesByLocation) getAllEventsSinceResourceVersion(rvs types.InternalResourceVersionMap) ([]runtime.Object, error) {
+	locStartPostitions := make(map[location.Location]int)
+
+	for loc, rv := range rvs {
+		qByLoc, isOK := eq.eventQueueByLoc[loc]
+		if isOK {
+			startIndex, err := qByLoc.GetEventIndexSinceResourceVersion(rv)
+			if err != nil {
+				if err == types.Error_EndOfEventQueue {
+					return nil, nil
+				}
+				return nil, err
+			}
+			locStartPostitions[loc] = startIndex
+		}
+	}
+
+	eventsToReturn := make([]runtime.Object, 0)
+	for loc, qByLoc := range eq.eventQueueByLoc {
+		startIndex, isOK := locStartPostitions[loc]
+		var events []runtime.Object
+		var err error
+		if isOK {
+			events, err = qByLoc.GetEventsFromIndex(startIndex)
+		} else {
+			events, err = qByLoc.GetEventsFromIndex(qByLoc.GetStartPos())
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if len(events) > 0 {
+			eventsToReturn = append(eventsToReturn, events...)
+		}
+	}
+
+	return eventsToReturn, nil
 }

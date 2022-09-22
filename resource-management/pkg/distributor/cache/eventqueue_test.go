@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	objectcache "global-resource-service/resource-management/pkg/common-lib/types/cache"
+	"global-resource-service/resource-management/pkg/common-lib/types/cache"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	nodeutil "global-resource-service/resource-management/pkg/distributor/node"
@@ -36,7 +36,7 @@ var defaultLocBeijing_RP1 = location.NewLocation(location.Beijing, location.Reso
 
 func Test_getEventIndexSinceResourceVersion_ByLoc(t *testing.T) {
 	// initalize node event queue by loc
-	qloc := objectcache.NewEventQueue()
+	qloc := cache.NewEventQueue()
 	for i := 1; i <= 100; i++ {
 		qloc.EnqueueEvent(generateManagedNodeEvent(defaultLocBeijing_RP1))
 	}
@@ -85,7 +85,7 @@ func Test_getEventIndexSinceResourceVersion_ByLoc(t *testing.T) {
 	assert.Equal(t, -1, index)
 
 	// generate event to exceed length of queue
-	for i := 1; i <= objectcache.LengthOfEventQueue; i++ {
+	for i := 1; i <= cache.LengthOfEventQueue; i++ {
 		qloc.EnqueueEvent(generateManagedNodeEvent(defaultLocBeijing_RP1))
 	}
 	t.Logf("Current rv %v", rvToGenerate)
