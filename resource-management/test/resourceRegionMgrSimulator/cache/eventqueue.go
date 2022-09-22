@@ -23,13 +23,12 @@ import (
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	objectcache "global-resource-service/resource-management/pkg/common-lib/types/cache"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 )
 
 type NodeEventQueue struct {
-	watchChan chan *event.NodeEvent
+	watchChan chan *runtime.NodeEvent
 
 	// used to lock enqueue operation during snapshot
 	enqueueLock sync.RWMutex
@@ -58,7 +57,7 @@ func (eq *NodeEventQueue) ReleaseSnapshotRLock() {
 	eq.enqueueLock.RUnlock()
 }
 
-func (eq *NodeEventQueue) EnqueueEvent(e *event.NodeEvent) {
+func (eq *NodeEventQueue) EnqueueEvent(e *runtime.NodeEvent) {
 	eq.enqueueLock.Lock()
 	defer eq.enqueueLock.Unlock()
 	if eq.watchChan != nil {
@@ -81,9 +80,9 @@ func (eq *NodeEventQueue) Watch(rvs types.InternalResourceVersionMap, clientWatc
 		return err
 	}
 
-	eq.watchChan = make(chan *event.NodeEvent)
+	eq.watchChan = make(chan *runtime.NodeEvent)
 	// writing event to channel
-	go func(downstreamCh chan runtime.Object, initEvents []runtime.Object, stopCh chan struct{}, upstreamCh chan *event.NodeEvent) {
+	go func(downstreamCh chan runtime.Object, initEvents []runtime.Object, stopCh chan struct{}, upstreamCh chan *runtime.NodeEvent) {
 		if downstreamCh == nil {
 			return
 		}

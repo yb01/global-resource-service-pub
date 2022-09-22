@@ -19,6 +19,7 @@ package cache
 import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 
 	"strconv"
 	"strings"
@@ -26,7 +27,6 @@ import (
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/cache"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	nodeutil "global-resource-service/resource-management/pkg/distributor/node"
 )
@@ -112,7 +112,7 @@ func Test_getEventIndexSinceResourceVersion_ByLoc(t *testing.T) {
 func generateManagedNodeEvent(loc *location.Location) *nodeutil.ManagedNodeEvent {
 	rvToGenerate += 1
 	node := createRandomNode(rvToGenerate, loc)
-	nodeEvent := event.NewNodeEvent(node, event.Added)
+	nodeEvent := runtime.NewNodeEvent(node, runtime.Added)
 	return nodeutil.NewManagedNodeEvent(nodeEvent, loc)
 }
 

@@ -18,6 +18,7 @@ package aggregrator
 
 import (
 	"encoding/json"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -28,7 +29,6 @@ import (
 	distributor "global-resource-service/resource-management/pkg/common-lib/interfaces/distributor"
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
 
 type Aggregator struct {
@@ -47,7 +47,7 @@ type ClientOfRRM struct {
 // RRM: Resource Region Manager
 //
 type ResponseFromRRM struct {
-	RegionNodeEvents [][]*event.NodeEvent
+	RegionNodeEvents [][]*runtime.NodeEvent
 	RvMap            types.TransitResourceVersionMap
 	Length           uint64
 }
@@ -61,8 +61,8 @@ type PullDataFromRRM struct {
 }
 
 const (
-	DefaultBatchLength = 20000
-	httpPrefix         = "http://"
+	DefaultBatchLength  = 20000
+	httpPrefix          = "http://"
 	defaultPullInterval = 10 * time.Millisecond // 10ms as default pull interval
 )
 
@@ -94,7 +94,7 @@ func (a *Aggregator) Run() (err error) {
 			}()
 
 			var crv types.TransitResourceVersionMap
-			var regionNodeEvents [][]*event.NodeEvent
+			var regionNodeEvents [][]*runtime.NodeEvent
 			var length uint64
 			var eventProcess bool
 
@@ -114,7 +114,7 @@ func (a *Aggregator) Run() (err error) {
 					klog.V(4).Infof("Total (%v) region node events are pulled successfully in (%v) RPs", length, len(regionNodeEvents))
 
 					// Convert 2D array to 1D array
-					minRecordNodeEvents := make([]*event.NodeEvent, 0, length)
+					minRecordNodeEvents := make([]*runtime.NodeEvent, 0, length)
 					for j := 0; j < len(regionNodeEvents); j++ {
 						minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
 					}
@@ -166,7 +166,7 @@ func (a *Aggregator) createClient(url string) *ClientOfRRM {
 // or
 // Call the resource region manager's SubsequentPull method {url}/resources/subsequentpull when crv is not nil
 //
-func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64, crv types.TransitResourceVersionMap) ([][]*event.NodeEvent, uint64) {
+func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64, crv types.TransitResourceVersionMap) ([][]*runtime.NodeEvent, uint64) {
 	var path string
 
 	if len(crv) == 0 {

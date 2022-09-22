@@ -19,7 +19,7 @@ package metrics
 import (
 	"github.com/google/uuid"
 	common_lib "global-resource-service/resource-management/pkg/common-lib"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
+	runtime2 "global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"runtime"
 	"strconv"
 	"testing"
@@ -63,7 +63,7 @@ func Test_MemoryUsageOfLatencyReport(t *testing.T) {
 	count := 1000000
 	// Get memory usage for 1M node events
 	common_lib.ResourceManagementMeasurement_Enabled = false
-	nodes := make([]*event.NodeEvent, count)
+	nodes := make([]*runtime2.NodeEvent, count)
 	for i := 0; i < count; i++ {
 		nodes[i] = createNodeEvent()
 	}
@@ -89,8 +89,8 @@ func Test_MemoryUsageOfLatencyReport(t *testing.T) {
 	t.Logf("Alloc = %v, TotalAlloc = %v, Sys = %v, NumGC = %v", m.Alloc, m.TotalAlloc, m.Sys, m.NumGC)
 }
 
-func createNodeEvent() *event.NodeEvent {
+func createNodeEvent() *runtime2.NodeEvent {
 	n := createRandomNode(rvToGenerate+1, defaultLocBeijing_RP1)
-	ne := event.NewNodeEvent(n, event.Added)
+	ne := runtime2.NewNodeEvent(n, runtime2.Added)
 	return ne
 }

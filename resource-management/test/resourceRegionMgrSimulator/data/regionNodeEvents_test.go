@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/config"
 )
@@ -120,7 +119,7 @@ func runWatch(t *testing.T, expectedEventCount int, rvs types.TransitResourceVer
 		eventCount := 0
 
 		for e := range watchCh {
-			assert.Equal(t, event.Modified, e.GetEventType())
+			assert.Equal(t, runtime.Modified, e.GetEventType())
 			loc := types.RvLocation{
 				Region:    location.Beijing,
 				Partition: location.ResourcePartition(e.GetGeoInfo().ResourcePartition),

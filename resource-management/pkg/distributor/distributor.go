@@ -26,7 +26,6 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/distributor/cache"
 	"global-resource-service/resource-management/pkg/distributor/node"
@@ -264,7 +263,7 @@ func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResource
 	return nodeEventQueue.Watch(internal_rvs, watchChan, stopCh)
 }
 
-func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, types.TransitResourceVersionMap) {
+func (dis *ResourceDistributor) ProcessEvents(events []*runtime.NodeEvent) (bool, types.TransitResourceVersionMap) {
 	eventsToProcess := make([]*node.ManagedNodeEvent, len(events))
 	for i := 0; i < len(events); i++ {
 		if events[i] != nil {

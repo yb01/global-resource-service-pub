@@ -18,20 +18,20 @@ package types
 
 import (
 	"encoding/json"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"io"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 )
 
-type RegionNodeEvents [][]*event.NodeEvent
+type RegionNodeEvents [][]*runtime.NodeEvent
 
 type PostCRVstatus bool
 
 // RRM: Resource Region Manager
 //
 type ResponseFromRRM struct {
-	RegionNodeEvents [][]*event.NodeEvent
+	RegionNodeEvents [][]*runtime.NodeEvent
 	RvMap            types.TransitResourceVersionMap
 	Length           uint64
 }

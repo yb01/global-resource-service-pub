@@ -17,6 +17,7 @@ limitations under the License.
 package storage
 
 import (
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"k8s.io/klog/v2"
 	"math"
 	"sync"
@@ -24,7 +25,6 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/hash"
 	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/distributor/cache"
 	"global-resource-service/resource-management/pkg/distributor/node"
@@ -114,7 +114,7 @@ func (vs *VirtualNodeStore) GenerateBookmarkEvent() *node.ManagedNodeEvent {
 
 	for _, n := range vs.nodeEventByHash {
 		logicalNode := n.CopyNode()
-		nodeEvent := event.NewNodeEvent(logicalNode, event.Bookmark)
+		nodeEvent := runtime.NewNodeEvent(logicalNode, runtime.Bookmark)
 		return node.NewManagedNodeEvent(nodeEvent, n.GetLocation())
 	}
 	return nil
@@ -259,12 +259,12 @@ func (ns *NodeStore) UpdateNode(nodeEvent *node.ManagedNodeEvent) {
 }
 
 // TODO
-func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
+func (ns NodeStore) DeleteNode(nodeEvent runtime.NodeEvent) {
 }
 
 func (ns NodeStore) GetNode(region location.Region, resourcePartition location.ResourcePartition, nodeId string) (*types.LogicalNode, error) {
 	n := &types.LogicalNode{Id: nodeId}
-	ne := event.NewNodeEvent(n, event.Bookmark)
+	ne := runtime.NewNodeEvent(n, runtime.Bookmark)
 
 	loc := location.NewLocation(location.Region(region), location.ResourcePartition((resourcePartition)))
 	mgmtNE := node.NewManagedNodeEvent(ne, loc)
@@ -313,9 +313,9 @@ func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, pers
 
 func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent) bool {
 	switch nodeEvent.GetEventType() {
-	case event.Added:
+	case runtime.Added:
 		ns.CreateNode(nodeEvent)
-	case event.Modified:
+	case runtime.Modified:
 		ns.UpdateNode(nodeEvent)
 	default:
 		// TODO - action needs to take when non acceptable events happened

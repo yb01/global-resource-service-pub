@@ -26,7 +26,6 @@ import (
 	"k8s.io/klog/v2"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/test/resourceRegionMgrSimulator/cache"
@@ -104,14 +103,14 @@ func ListNodes() (simulatorTypes.RegionNodeEvents, uint64, types.TransitResource
 
 	nodeEventsByRP := make(simulatorTypes.RegionNodeEvents, config.RpNum)
 	for i := 0; i < config.RpNum; i++ {
-		nodeEventsByRP[i] = make([]*event.NodeEvent, config.NodesPerRP)
+		nodeEventsByRP[i] = make([]*runtime.NodeEvent, config.NodesPerRP)
 	}
 
 	RegionNodeEventQueue.AcquireSnapshotRLock()
 	for i := 0; i < config.RpNum; i++ {
 		for j := 0; j < config.NodesPerRP; j++ {
 			node := RegionNodeEventsList[i][j].Node.Copy()
-			nodeEventsByRP[i][j] = event.NewNodeEvent(node, event.Added)
+			nodeEventsByRP[i][j] = runtime.NewNodeEvent(node, runtime.Added)
 		}
 	}
 
@@ -161,12 +160,12 @@ func generateAddedNodeEvents(regionName string, rpNum, nodesPerRP int) (simulato
 
 		// Initialize the resource version starting from 0 for each RP
 		var rvToGenerateRPs = 0
-		eventsAdd[j] = make([]*event.NodeEvent, nodesPerRP)
+		eventsAdd[j] = make([]*runtime.NodeEvent, nodesPerRP)
 		for i := 0; i < nodesPerRP; i++ {
 			rvToGenerateRPs += 1
 
 			nodeToAdd := createRandomNode(rvToGenerateRPs, loc)
-			nodeEvent := event.NewNodeEvent(nodeToAdd, event.Added)
+			nodeEvent := runtime.NewNodeEvent(nodeToAdd, runtime.Added)
 			eventsAdd[j][i] = nodeEvent
 
 			// node event enqueue
@@ -200,7 +199,7 @@ func makeOneRPDown() {
 		// record the time to change resource version in resource partition
 		node.LastUpdatedTime = time.Now().UTC()
 
-		newEvent := event.NewNodeEvent(node, event.Modified)
+		newEvent := runtime.NewNodeEvent(node, runtime.Modified)
 
 		//RegionNodeEventsList[selectedRP][i] = no need: keep event as added, node will be updated as pointer
 		RegionNodeEventQueue.EnqueueEvent(newEvent)
@@ -246,7 +245,7 @@ func makeDataUpdate(changesThreshold int) {
 			// record the time to change resource version in resource partition
 			node.LastUpdatedTime = time.Now().UTC()
 
-			newEvent := event.NewNodeEvent(node, event.Modified)
+			newEvent := runtime.NewNodeEvent(node, runtime.Modified)
 			//RegionNodeEventsList[j][i] = newEvent - no need: keep event as added, node will be updated as pointer
 			RegionNodeEventQueue.EnqueueEvent(newEvent)
 
