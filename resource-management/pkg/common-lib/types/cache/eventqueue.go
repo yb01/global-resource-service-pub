@@ -192,9 +192,9 @@ func (eq *EventQueuesByLocation) Watch(rvs types.InternalResourceVersionMap, cli
 					break
 				}
 				klog.V(9).Infof("Sending event with object id %v", event.GetId())
-				event.SetCheckpoint(metrics.Distributor_Sending)
+				event.SetCheckpoint(int(metrics.Distributor_Sending))
 				downstreamCh <- event
-				event.SetCheckpoint(metrics.Distributor_Sent)
+				event.SetCheckpoint(int(metrics.Distributor_Sent))
 				klog.V(9).Infof("Event with object id %v sent", event.GetId())
 			}
 		}

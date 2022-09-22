@@ -17,7 +17,6 @@ limitations under the License.
 package node
 
 import (
-	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
@@ -71,7 +70,7 @@ func (n *ManagedNodeEvent) CopyNode() *types.LogicalNode {
 	return n.nodeEvent.Node.Copy()
 }
 
-func (n *ManagedNodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoint) {
+func (n *ManagedNodeEvent) SetCheckpoint(int) {
 	klog.Error("Not implemented SetCheckpoint method")
 }
 

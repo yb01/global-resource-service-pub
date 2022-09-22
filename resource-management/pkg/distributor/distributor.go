@@ -269,7 +269,7 @@ func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, 
 	for i := 0; i < len(events); i++ {
 		if events[i] != nil {
 			loc := location.NewLocation(location.Region(events[i].Node.GeoInfo.Region), location.ResourcePartition(events[i].Node.GeoInfo.ResourcePartition))
-			events[i].SetCheckpoint(metrics.Distributor_Received)
+			events[i].SetCheckpoint(int(metrics.Distributor_Received))
 			if loc != nil {
 				eventsToProcess[i] = node.NewManagedNodeEvent(events[i], loc)
 			} else {

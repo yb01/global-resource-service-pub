@@ -17,11 +17,11 @@ limitations under the License.
 package event
 
 import (
-	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"time"
 
-	"global-resource-service/resource-management/pkg/common-lib/metrics"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 )
 
 // EventType defines the possible types of events.
@@ -45,17 +45,17 @@ func NewNodeEvent(node *types.LogicalNode, eventType EventType) *NodeEvent {
 	return &NodeEvent{
 		Type:        eventType,
 		Node:        node,
-		checkpoints: make([]time.Time, metrics.Len_ResourceManagementCheckpoint),
+		checkpoints: make([]time.Time, common_lib.Len_ResourceManagementCheckpoint),
 	}
 }
 
-func (e *NodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoint) {
-	if !metrics.ResourceManagementMeasurement_Enabled {
+func (e *NodeEvent) SetCheckpoint(checkpoint int) {
+	if !common_lib.ResourceManagementMeasurement_Enabled {
 		return
 	}
 
 	if e.checkpoints == nil {
-		e.checkpoints = make([]time.Time, metrics.Len_ResourceManagementCheckpoint)
+		e.checkpoints = make([]time.Time, common_lib.Len_ResourceManagementCheckpoint)
 	}
 	e.checkpoints[checkpoint] = time.Now().UTC()
 }

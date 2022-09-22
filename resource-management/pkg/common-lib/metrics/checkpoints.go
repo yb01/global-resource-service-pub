@@ -43,9 +43,3 @@ const (
 	Serializer_Encoded_Name ResourceManagementCheckpointName = "SER_ENCODED"
 	Serializer_Sent_Name    ResourceManagementCheckpointName = "SER_SENT"
 )
-
-var ResourceManagementMeasurement_Enabled = true
-
-func SetEnableResourceManagementMeasurement(enabled bool) {
-	ResourceManagementMeasurement_Enabled = enabled
-}

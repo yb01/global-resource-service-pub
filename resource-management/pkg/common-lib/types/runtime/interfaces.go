@@ -17,7 +17,6 @@ limitations under the License.
 package runtime
 
 import (
-	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
@@ -32,6 +31,6 @@ type Object interface {
 	GetLocation() *location.Location
 	GetLastUpdatedTime() time.Time
 
-	SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoint)
+	SetCheckpoint(int)
 	GetCheckpoints() []time.Time
 }

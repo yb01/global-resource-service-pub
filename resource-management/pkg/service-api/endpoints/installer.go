@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -32,7 +31,6 @@ import (
 	store "global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	apiTypes "global-resource-service/resource-management/pkg/service-api/types"
@@ -293,16 +291,12 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 				return
 			}
 
-			var nodeEvent event.NodeEvent
-			if nodeEvent, ok = record.(event.NodeEvent); !ok {
-				klog.Fatalf("Got non node event from channel. type %v", reflect.TypeOf(record))
-			}
-			nodeEvent.SetCheckpoint(metrics.Serializer_Encoded)
+			record.SetCheckpoint(metrics.Serializer_Encoded)
 			if len(watchCh) == 0 {
 				flusher.Flush()
 			}
-			nodeEvent.SetCheckpoint(metrics.Serializer_Sent)
-			event.AddLatencyMetricsAllCheckpoints(&nodeEvent)
+			record.SetCheckpoint(metrics.Serializer_Sent)
+			metrics.AddLatencyMetricsAllCheckpoints(record)
 		}
 	}
 }
