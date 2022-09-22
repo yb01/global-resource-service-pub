@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package event
+package runtime
 
 import (
 	"time"
@@ -86,4 +86,8 @@ func (n *NodeEvent) GetLocation() *location.Location {
 
 func (n *NodeEvent) GetLastUpdatedTime() time.Time {
 	return n.Node.LastUpdatedTime
+}
+
+func (n *NodeEvent) GetEvent() Object {
+	return n
 }

@@ -74,7 +74,7 @@ func (q *EventQueue) GetEventsFromIndex(startIndex int) ([]runtime.Object, error
 	length := q.endPos - startIndex
 	result := make([]runtime.Object, length)
 	for i := 0; i < length; i++ {
-		result[i] = q.circularEventQueue[(startIndex+i)%LengthOfEventQueue]
+		result[i] = q.circularEventQueue[(startIndex+i)%LengthOfEventQueue].GetEvent()
 	}
 
 	return result, nil
@@ -144,7 +144,7 @@ func (eq *EventQueuesByLocation) EnqueueEvent(e runtime.Object) {
 	defer eq.enqueueLock.Unlock()
 	if eq.watchChan != nil {
 		go func() {
-			eq.watchChan <- e
+			eq.watchChan <- e.GetEvent()
 		}()
 	}
 

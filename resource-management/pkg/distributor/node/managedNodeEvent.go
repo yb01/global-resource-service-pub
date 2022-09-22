@@ -17,20 +17,21 @@ limitations under the License.
 package node
 
 import (
-	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
-	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"k8s.io/klog/v2"
 	"time"
+
+	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
 // TODO - add more fields for minimal node record
 type ManagedNodeEvent struct {
-	nodeEvent *event.NodeEvent
+	nodeEvent *runtime.NodeEvent
 	loc       *location.Location
 }
 
-func NewManagedNodeEvent(nodeEvent *event.NodeEvent, loc *location.Location) *ManagedNodeEvent {
+func NewManagedNodeEvent(nodeEvent *runtime.NodeEvent, loc *location.Location) *ManagedNodeEvent {
 	return &ManagedNodeEvent{
 		nodeEvent: nodeEvent,
 		loc:       loc,
@@ -58,11 +59,11 @@ func (n *ManagedNodeEvent) GetGeoInfo() types.NodeGeoInfo {
 	return n.nodeEvent.Node.GeoInfo
 }
 
-func (n *ManagedNodeEvent) GetEventType() event.EventType {
+func (n *ManagedNodeEvent) GetEventType() runtime.EventType {
 	return n.nodeEvent.Type
 }
 
-func (n *ManagedNodeEvent) GetNodeEvent() *event.NodeEvent {
+func (n *ManagedNodeEvent) GetNodeEvent() *runtime.NodeEvent {
 	return n.nodeEvent
 }
 
@@ -81,4 +82,8 @@ func (e *ManagedNodeEvent) GetCheckpoints() []time.Time {
 
 func (n *ManagedNodeEvent) GetLastUpdatedTime() time.Time {
 	return n.nodeEvent.Node.LastUpdatedTime
+}
+
+func (n *ManagedNodeEvent) GetEvent() runtime.Object {
+	return n.nodeEvent
 }

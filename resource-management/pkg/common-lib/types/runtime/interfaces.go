@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"time"
 )
@@ -26,11 +25,14 @@ import (
 type Object interface {
 	GetResourceVersionInt64() uint64
 	GetGeoInfo() types.NodeGeoInfo
-	GetEventType() event.EventType
+	GetEventType() EventType
 	GetId() string
 	GetLocation() *location.Location
 	GetLastUpdatedTime() time.Time
 
 	SetCheckpoint(int)
 	GetCheckpoints() []time.Time
+
+	// Used to remove wrapper
+	GetEvent() Object
 }
