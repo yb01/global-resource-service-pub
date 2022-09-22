@@ -18,6 +18,7 @@ package aggregrator
 
 import (
 	"encoding/json"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"io/ioutil"
 	"net/http"
@@ -218,11 +219,11 @@ func (a *Aggregator) initPullOrSubsequentPull(c *ClientOfRRM, batchLength uint64
 		}
 	}
 
-	if metrics.ResourceManagementMeasurement_Enabled {
+	if common_lib.ResourceManagementMeasurement_Enabled {
 		for i := 0; i < len(ResponseObject.RegionNodeEvents); i++ {
 			for j := 0; j < len(ResponseObject.RegionNodeEvents[i]); j++ {
 				if ResponseObject.RegionNodeEvents[i][j] != nil {
-					ResponseObject.RegionNodeEvents[i][j].SetCheckpoint(metrics.Aggregator_Received)
+					ResponseObject.RegionNodeEvents[i][j].SetCheckpoint(int(metrics.Aggregator_Received))
 				}
 			}
 		}

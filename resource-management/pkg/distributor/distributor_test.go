@@ -216,7 +216,7 @@ func TestAddNodes(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
-	//metrics.ResourceManagementMeasurement_Enabled = false
+	//common_lib.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	previousNodeCount := 0
 	for i := 0; i < len(nodeCounts); i++ {

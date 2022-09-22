@@ -291,11 +291,11 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 				return
 			}
 
-			record.SetCheckpoint(metrics.Serializer_Encoded)
+			record.SetCheckpoint(int(metrics.Serializer_Encoded))
 			if len(watchCh) == 0 {
 				flusher.Flush()
 			}
-			record.SetCheckpoint(metrics.Serializer_Sent)
+			record.SetCheckpoint(int(metrics.Serializer_Sent))
 			metrics.AddLatencyMetricsAllCheckpoints(record)
 		}
 	}

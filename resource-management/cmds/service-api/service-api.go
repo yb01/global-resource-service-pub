@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	"os"
 	"strings"
 	"time"
@@ -26,7 +27,6 @@ import (
 	"k8s.io/klog/v2"
 
 	"global-resource-service/resource-management/cmds/service-api/app"
-	localMetrics "global-resource-service/resource-management/pkg/common-lib/metrics"
 )
 
 func main() {
@@ -59,7 +59,7 @@ func main() {
 	urls = strings.TrimLeft(urls, ",")
 	urls = strings.TrimRight(urls, ",")
 
-	localMetrics.SetEnableResourceManagementMeasurement(metricsEnabled)
+	common_lib.ResourceManagementMeasurement_Enabled = metricsEnabled
 	c.ResourceUrls = strings.Split(urls, ",")
 
 	// Check whether c.ResourceUrls contains invaild urls

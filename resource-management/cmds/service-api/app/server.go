@@ -18,6 +18,7 @@ package app
 
 import (
 	"fmt"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	"net/http"
 	"net/http/pprof"
 	"sync"
@@ -107,7 +108,7 @@ func Run(c *Config) error {
 		return err
 	}
 
-	if localMetrics.ResourceManagementMeasurement_Enabled {
+	if common_lib.ResourceManagementMeasurement_Enabled {
 		// start the event metrics report
 		klog.V(3).Infof("Starting the event metrics reporting routine...")
 		wg.Add(1)
