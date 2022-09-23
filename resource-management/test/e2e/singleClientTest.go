@@ -58,6 +58,7 @@ func main() {
 	flag.StringVar(&cfg.ClientFriendlyName, "friendly_name", "testclient", "Client friendly name other that the assigned Id")
 	flag.StringVar(&cfg.ClientRegion, "client_region", "Beijing", "Client identify where it is located")
 	flag.IntVar(&cfg.InitialRequestTotalMachines, "request_machines", 2500, "Initial request of number of machines")
+	flag.IntVar(&cfg.RegionIdToWatch, "region_id_to_watch", -1, "Region id to watch")
 	flag.StringVar(&regions, "request_regions", "Beijing", "list of regions, in comma separated string, to allocate the machines for the client")
 	flag.DurationVar(&testCfg.testDuration, "test_duration", 10*time.Minute, "Test duration, measured by number minutes of watch of node changes. default 10 minutes")
 	flag.StringVar(&testCfg.action, "action", "", "action to perform, can be register list or watch, default to register-list-watch")
@@ -80,6 +81,14 @@ func main() {
 	listStats := stats.NewListStats()
 	watchStats := stats.NewWatchStats()
 
+	hasRegionIdToWatch := true
+	var regionIdToWatch types.RegionName
+	if cfg.RegionIdToWatch == -1 {
+		hasRegionIdToWatch = false
+	} else {
+		regionIdToWatch = types.RegionName(cfg.RegionIdToWatch)
+	}
+
 	switch testCfg.action {
 	case register:
 		for i := 0; i < testCfg.repeats; i++ {
@@ -98,13 +107,13 @@ func main() {
 		clientId := registerClient(client, registerStats)
 		client.Id = clientId
 		crv := listNodes(client, client.Id, store, listStats, listOpts)
-		watchNodes(client, client.Id, crv, store, watchStats)
+		watchNodes(client, client.Id, crv, store, watchStats, hasRegionIdToWatch, regionIdToWatch)
 		printTestStats(registerStats, listStats, watchStats)
 	default:
 		clientId := registerClient(client, registerStats)
 		client.Id = clientId
 		crv := listNodes(client, client.Id, store, listStats, listOpts)
-		watchNodes(client, client.Id, crv, store, watchStats)
+		watchNodes(client, client.Id, crv, store, watchStats, hasRegionIdToWatch, regionIdToWatch)
 		printTestStats(registerStats, listStats, watchStats)
 	}
 
@@ -174,7 +183,7 @@ func listNodes(client rmsclient.RmsInterface, clientId string, store cache.Store
 }
 
 func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.TransitResourceVersionMap, store cache.Store,
-	watchStats *stats.WatchStats) {
+	watchStats *stats.WatchStats, hasRegionToWatch bool, regionToWatch types.RegionName) {
 	var start, end time.Time
 
 	klog.Infof("Watch resources update from service ...")
@@ -185,6 +194,9 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 	}
 
 	watchCh := watcher.ResultChan()
+
+	var regionWatchStart, regionWatchEnd *time.Time
+	regionEventCount := 0
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -200,9 +212,21 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 					klog.Infof("End of results")
 					return
 				}
-				watchDelay := time.Now().UTC().Sub(record.Node.LastUpdatedTime)
+				currentTime := time.Now().UTC()
+				watchDelay := currentTime.Sub(record.Node.LastUpdatedTime)
 				addWatchLatency(watchDelay, watchStats)
 				logIfProlonged(&record, watchDelay, watchStats)
+
+				if hasRegionToWatch && record.Node.GeoInfo.Region == regionToWatch {
+					regionEventCount++
+					if regionWatchStart == nil {
+						regionWatchStart = &currentTime
+						klog.Infof("[Throughput] Time to start getting event from region %v: %v", regionToWatch, regionWatchStart)
+					} else {
+						regionWatchEnd = &currentTime
+					}
+				}
+
 				switch record.Type {
 				case runtime.Added:
 					store.Add(*record.Node)
@@ -224,6 +248,10 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 	wg.Wait()
 	end = time.Now().UTC()
 	watchStats.WatchDuration = end.Sub(start)
+	regionWatchDuration := regionWatchEnd.Sub(*regionWatchStart)
+	if hasRegionToWatch {
+		klog.Infof("[Throughput] Time to get last event from region %v: %v. Duration %v. Event count %v", regionToWatch, regionWatchEnd, regionWatchDuration, regionEventCount)
+	}
 	return
 }
 

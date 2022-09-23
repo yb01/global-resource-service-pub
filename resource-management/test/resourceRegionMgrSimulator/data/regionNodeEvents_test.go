@@ -108,7 +108,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 
 	allWaitGroup.Add(1)
 	runWatch(t, config.NodesPerRP+atEachMin10, rvs, watchCh, stopCh, allWaitGroup)
-	makeOneRPDown()
+	makeRPDown(1)
 	allWaitGroup.Wait()
 	time.Sleep(1 * time.Millisecond)
 	t.Logf("RP down test: Watch %d events succeed!\n", config.NodesPerRP+atEachMin10)
@@ -137,4 +137,23 @@ func runWatch(t *testing.T, expectedEventCount int, rvs types.TransitResourceVer
 			}
 		}
 	}(t, expectedEventCount, rvs, watchCh, stopCh, wg)
+}
+
+func TestMakeRPDownPerformance(t *testing.T) {
+	// create nodes
+	rpNum := 40
+	nodesPerRP := 25000
+	start := time.Now()
+	Init("Beijing", rpNum, nodesPerRP)
+	// 5.701659636s
+	duration := time.Since(start)
+	assert.Equal(t, rpNum, len(RegionNodeEventsList))
+	assert.Equal(t, nodesPerRP, len(RegionNodeEventsList[0]))
+	t.Logf("Time to generate %d init events: %v", rpNum*nodesPerRP, duration)
+
+	// make rp down
+	// 1M: 1.583124953s
+	for i := 1; i <= rpNum; i++ {
+		makeRPDown(i)
+	}
 }

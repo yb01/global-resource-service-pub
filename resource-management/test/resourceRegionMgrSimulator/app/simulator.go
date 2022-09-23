@@ -33,6 +33,7 @@ type RegionConfig struct {
 	RegionName            string
 	RpNum                 int
 	NodesPerRP            int
+	RPDownNumber          int
 	MasterPort            string
 	DataPattern           string
 	WaitTimeForMakeRpDown int
