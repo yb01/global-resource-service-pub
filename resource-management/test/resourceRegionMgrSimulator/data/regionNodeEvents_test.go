@@ -35,6 +35,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	start := time.Now()
 	Init("Beijing", rpNum, nodesPerRP)
 	// 2.827539846s
+	// new: 2.920060761s
 	duration := time.Since(start)
 	assert.Equal(t, rpNum, len(RegionNodeEventsList))
 	assert.Equal(t, nodesPerRP, len(RegionNodeEventsList[0]))
@@ -56,6 +57,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	}
 
 	// 500K nodes, list duration 179.605574ms
+	// new: duration 231.215888ms
 	t.Logf("List %v nodes, duration %v, return RVS %v.", count, duration, rvs)
 
 	// Watch node events
@@ -95,6 +97,7 @@ func TestGetRegionNodeModifiedEventsCRV(t *testing.T) {
 	duration = time.Since(start)
 	time.Sleep(1 * time.Millisecond)
 	// Duration 27.405µs
+	// new Duration 39.651µs
 	t.Logf("Re-watch %d events succeed! Duration %v\n", updateEventCount, duration)
 
 	// Test RP down event watches
@@ -146,6 +149,7 @@ func TestMakeRPDownPerformance(t *testing.T) {
 	start := time.Now()
 	Init("Beijing", rpNum, nodesPerRP)
 	// 5.701659636s
+	// new: 5.88300605s
 	duration := time.Since(start)
 	assert.Equal(t, rpNum, len(RegionNodeEventsList))
 	assert.Equal(t, nodesPerRP, len(RegionNodeEventsList[0]))
@@ -153,6 +157,7 @@ func TestMakeRPDownPerformance(t *testing.T) {
 
 	// make rp down
 	// 1M: 1.583124953s
+	// 1M new: 1.67627057s
 	for i := 1; i <= rpNum; i++ {
 		makeRPDown(i)
 	}
