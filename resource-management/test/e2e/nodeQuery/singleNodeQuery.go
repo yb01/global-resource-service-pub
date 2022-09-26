@@ -31,7 +31,7 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
 	"global-resource-service/resource-management/pkg/store/redis"
-	"global-resource-service/test/e2e/stats"
+	"global-resource-service/resource-management/test/e2e/stats"
 )
 
 type testConfig struct {
@@ -39,7 +39,7 @@ type testConfig struct {
 	singleNodeNum      int
 	singleNodeInterval time.Duration
 	batchNodeNum       int
-	remoteRedisPort	   string
+	remoteRedisPort    string
 	batchNodeInterval  time.Duration
 }
 

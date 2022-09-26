@@ -132,3 +132,19 @@ func GroupByRegion(nodes []*types.LogicalNode) {
 
 	return
 }
+
+type NodeQueryStats struct {
+	NodeQueryInterval time.Duration
+	NumberOfNodes     int
+	NodeQueryLatency  *metrics.LatencyMetrics
+}
+
+func NewNodeQueryStats() *NodeQueryStats {
+	return &NodeQueryStats{NodeQueryLatency: metrics.NewLatencyMetrics(0)} // only one data point
+}
+
+func (nqs *NodeQueryStats) PrintStats() {
+	latencySummary := nqs.NodeQueryLatency.GetSummary()
+	klog.Infof("[Metrics][Nodes]QueryInterval: %v, Number of nodes queried during each interval: %v, perc50: %v, perc90: %v, perc99: %v. ",
+		nqs.NodeQueryInterval, nqs.NumberOfNodes, latencySummary.P50, latencySummary.P90, latencySummary.P99)
+}
