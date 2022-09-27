@@ -86,7 +86,7 @@ func main() {
 	// OR
 	// Generate update changes of Daily Pattern
 	// - simulate 10 changes each minute
-	data.MakeDataUpdate(c.DataPattern, c.WaitTimeForDataChangePatternn, c.RPDownNumber)
+	data.MakeDataUpdate(c.DataPattern, c.WaitTimeForDataChangePattern, c.RPDownNumber)
 
 	// Run simulater RSET API server
 	if err := app.Run(c); err != nil {
