@@ -251,8 +251,8 @@ func watchNodes(client rmsclient.RmsInterface, clientId string, crv types.Transi
 	wg.Wait()
 	end = time.Now().UTC()
 	watchStats.WatchDuration = end.Sub(start)
-	regionWatchDuration := regionWatchEnd.Sub(*regionWatchStart)
 	if hasRegionToWatch {
+		regionWatchDuration := regionWatchEnd.Sub(*regionWatchStart)
 		klog.Infof("[Throughput] Time to get last event from region %v: %v. Duration %v. Event count %v", regionToWatch, regionWatchEnd, regionWatchDuration, regionEventCount)
 	}
 	return
