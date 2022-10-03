@@ -29,8 +29,8 @@ import (
 	"k8s.io/klog/v2"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/distributor/storage"
 	apitypes "global-resource-service/resource-management/pkg/service-api/types"
@@ -73,12 +73,12 @@ func createRandomNode(rv int) *types.LogicalNode {
 	}
 }
 
-func generateAddNodeEvent(eventNum int) []*event.NodeEvent {
-	result := make([]*event.NodeEvent, eventNum)
+func generateAddNodeEvent(eventNum int) []*runtime.NodeEvent {
+	result := make([]*runtime.NodeEvent, eventNum)
 	for i := 0; i < eventNum; i++ {
 		rvToGenerate += 1
 		node := createRandomNode(rvToGenerate)
-		nodeEvent := event.NewNodeEvent(node, event.Added)
+		nodeEvent := runtime.NewNodeEvent(node, runtime.Added)
 		result[i] = nodeEvent
 	}
 	return result

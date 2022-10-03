@@ -25,8 +25,8 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/pkg/distributor/cache"
 	"global-resource-service/resource-management/pkg/distributor/node"
 	"global-resource-service/resource-management/pkg/distributor/storage"
@@ -242,7 +242,7 @@ func (dis *ResourceDistributor) ListNodesForClient(clientId string) ([]*types.Lo
 	return nodes, finalRVs, nil
 }
 
-func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResourceVersionMap, watchChan chan *event.NodeEvent, stopCh chan struct{}) error {
+func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResourceVersionMap, watchChan chan runtime.Object, stopCh chan struct{}) error {
 	var nodeEventQueue *cache.NodeEventQueue
 	var isOK bool
 	if nodeEventQueue, isOK = dis.nodeEventQueueMap[clientId]; !isOK || nodeEventQueue == nil {
@@ -263,12 +263,12 @@ func (dis *ResourceDistributor) Watch(clientId string, rvs types.TransitResource
 	return nodeEventQueue.Watch(internal_rvs, watchChan, stopCh)
 }
 
-func (dis *ResourceDistributor) ProcessEvents(events []*event.NodeEvent) (bool, types.TransitResourceVersionMap) {
+func (dis *ResourceDistributor) ProcessEvents(events []*runtime.NodeEvent) (bool, types.TransitResourceVersionMap) {
 	eventsToProcess := make([]*node.ManagedNodeEvent, len(events))
 	for i := 0; i < len(events); i++ {
 		if events[i] != nil {
 			loc := location.NewLocation(location.Region(events[i].Node.GeoInfo.Region), location.ResourcePartition(events[i].Node.GeoInfo.ResourcePartition))
-			events[i].SetCheckpoint(metrics.Distributor_Received)
+			events[i].SetCheckpoint(int(metrics.Distributor_Received))
 			if loc != nil {
 				eventsToProcess[i] = node.NewManagedNodeEvent(events[i], loc)
 			} else {

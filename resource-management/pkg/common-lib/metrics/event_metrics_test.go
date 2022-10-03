@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package event
+package metrics
 
 import (
 	"github.com/google/uuid"
@@ -23,9 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"global-resource-service/resource-management/pkg/common-lib/metrics"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	runtime2 "global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
 var defaultLocBeijing_RP1 = location.NewLocation(location.Beijing, location.ResourcePartition1)
@@ -35,12 +36,12 @@ func Test_PrintLatencyReport(t *testing.T) {
 	ne := createNodeEvent()
 
 	time.Sleep(100 * time.Millisecond)
-	ne.SetCheckpoint(metrics.Aggregator_Received)
-	ne.SetCheckpoint(metrics.Distributor_Received)
-	ne.SetCheckpoint(metrics.Distributor_Sending)
-	ne.SetCheckpoint(metrics.Distributor_Sent)
-	ne.SetCheckpoint(metrics.Serializer_Encoded)
-	ne.SetCheckpoint(metrics.Serializer_Sent)
+	ne.SetCheckpoint(int(Aggregator_Received))
+	ne.SetCheckpoint(int(Distributor_Received))
+	ne.SetCheckpoint(int(Distributor_Sending))
+	ne.SetCheckpoint(int(Distributor_Sent))
+	ne.SetCheckpoint(int(Serializer_Encoded))
+	ne.SetCheckpoint(int(Serializer_Sent))
 	AddLatencyMetricsAllCheckpoints(ne)
 	PrintLatencyReport()
 }
@@ -61,8 +62,8 @@ func createRandomNode(rv int, loc *location.Location) *types.LogicalNode {
 func Test_MemoryUsageOfLatencyReport(t *testing.T) {
 	count := 1000000
 	// Get memory usage for 1M node events
-	metrics.ResourceManagementMeasurement_Enabled = false
-	nodes := make([]*NodeEvent, count)
+	common_lib.ResourceManagementMeasurement_Enabled = false
+	nodes := make([]*runtime2.NodeEvent, count)
 	for i := 0; i < count; i++ {
 		nodes[i] = createNodeEvent()
 	}
@@ -72,14 +73,14 @@ func Test_MemoryUsageOfLatencyReport(t *testing.T) {
 	t.Logf("Alloc = %v, TotalAlloc = %v, Sys = %v, NumGC = %v", m.Alloc, m.TotalAlloc, m.Sys, m.NumGC)
 
 	// Enable metrics
-	metrics.ResourceManagementMeasurement_Enabled = true
+	common_lib.ResourceManagementMeasurement_Enabled = true
 	for i := 0; i < count; i++ {
-		nodes[i].SetCheckpoint(metrics.Aggregator_Received)
-		nodes[i].SetCheckpoint(metrics.Distributor_Received)
-		nodes[i].SetCheckpoint(metrics.Distributor_Sending)
-		nodes[i].SetCheckpoint(metrics.Distributor_Sent)
-		nodes[i].SetCheckpoint(metrics.Serializer_Encoded)
-		nodes[i].SetCheckpoint(metrics.Serializer_Sent)
+		nodes[i].SetCheckpoint(int(Aggregator_Received))
+		nodes[i].SetCheckpoint(int(Distributor_Received))
+		nodes[i].SetCheckpoint(int(Distributor_Sending))
+		nodes[i].SetCheckpoint(int(Distributor_Sent))
+		nodes[i].SetCheckpoint(int(Serializer_Encoded))
+		nodes[i].SetCheckpoint(int(Serializer_Sent))
 		AddLatencyMetricsAllCheckpoints(nodes[i])
 	}
 	PrintLatencyReport()
@@ -88,8 +89,8 @@ func Test_MemoryUsageOfLatencyReport(t *testing.T) {
 	t.Logf("Alloc = %v, TotalAlloc = %v, Sys = %v, NumGC = %v", m.Alloc, m.TotalAlloc, m.Sys, m.NumGC)
 }
 
-func createNodeEvent() *NodeEvent {
+func createNodeEvent() *runtime2.NodeEvent {
 	n := createRandomNode(rvToGenerate+1, defaultLocBeijing_RP1)
-	ne := NewNodeEvent(n, Added)
+	ne := runtime2.NewNodeEvent(n, runtime2.Added)
 	return ne
 }

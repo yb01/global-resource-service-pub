@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/pkg/distributor/cache"
 	"global-resource-service/resource-management/pkg/distributor/storage"
 )
@@ -102,7 +102,7 @@ func TestDistributorInit(t *testing.T) {
 	}
 }
 
-func measureProcessEvent(t *testing.T, dis *ResourceDistributor, eventType string, events []*event.NodeEvent, previousNodeCount int) {
+func measureProcessEvent(t *testing.T, dis *ResourceDistributor, eventType string, events []*runtime.NodeEvent, previousNodeCount int) {
 	// get all node ids
 	nodeIds := make(map[string]bool, len(events))
 	eventCount := 0
@@ -216,7 +216,7 @@ func TestAddNodes(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
-	//metrics.ResourceManagementMeasurement_Enabled = false
+	//common_lib.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	previousNodeCount := 0
 	for i := 0; i < len(nodeCounts); i++ {
@@ -226,28 +226,28 @@ func TestAddNodes(t *testing.T) {
 	}
 }
 
-func generateAddNodeEvent(eventNum int, loc *location.Location) []*event.NodeEvent {
-	result := make([]*event.NodeEvent, eventNum)
+func generateAddNodeEvent(eventNum int, loc *location.Location) []*runtime.NodeEvent {
+	result := make([]*runtime.NodeEvent, eventNum)
 	for i := 0; i < eventNum; i++ {
 		rvToGenerate += 1
 		node := createRandomNode(rvToGenerate, loc)
-		nodeEvent := event.NewNodeEvent(node, event.Added)
+		nodeEvent := runtime.NewNodeEvent(node, runtime.Added)
 		result[i] = nodeEvent
 	}
 	return result
 }
 
-func generateAddNodeEventToArray(eventNum int, loc *location.Location, generatedEvents *[]*event.NodeEvent, startIndex int) {
+func generateAddNodeEventToArray(eventNum int, loc *location.Location, generatedEvents *[]*runtime.NodeEvent, startIndex int) {
 	for i := 0; i < eventNum; i++ {
 		rvToGenerate += 1
 		node := createRandomNode(rvToGenerate, loc)
-		nodeEvent := event.NewNodeEvent(node, event.Added)
+		nodeEvent := runtime.NewNodeEvent(node, runtime.Added)
 		(*generatedEvents)[i+startIndex] = nodeEvent
 	}
 }
 
-func generateUpdateNodeEvents(originalEvents []*event.NodeEvent) []*event.NodeEvent {
-	result := make([]*event.NodeEvent, len(originalEvents))
+func generateUpdateNodeEvents(originalEvents []*runtime.NodeEvent) []*runtime.NodeEvent {
+	result := make([]*runtime.NodeEvent, len(originalEvents))
 	for i := 0; i < len(originalEvents); i++ {
 		rvToGenerate += 1
 
@@ -260,19 +260,19 @@ func generateUpdateNodeEvents(originalEvents []*event.NodeEvent) []*event.NodeEv
 			},
 		}
 
-		newEvent := event.NewNodeEvent(lNode, event.Modified)
+		newEvent := runtime.NewNodeEvent(lNode, runtime.Modified)
 		result[i] = newEvent
 	}
 	return result
 }
 
-func generatedUpdateNodeEventsFromNodeList(nodes []*types.LogicalNode) []*event.NodeEvent {
-	result := make([]*event.NodeEvent, len(nodes))
+func generatedUpdateNodeEventsFromNodeList(nodes []*types.LogicalNode) []*runtime.NodeEvent {
+	result := make([]*runtime.NodeEvent, len(nodes))
 	for i := 0; i < len(nodes); i++ {
 		rvToGenerate += 1
 		node := nodes[i].Copy()
 		node.ResourceVersion = strconv.Itoa(rvToGenerate)
-		newEvent := event.NewNodeEvent(node, event.Modified)
+		newEvent := runtime.NewNodeEvent(node, runtime.Modified)
 		result[i] = newEvent
 	}
 	return result
@@ -438,7 +438,7 @@ func TestRegistrationWorkflow(t *testing.T) {
 	assert.Equal(t, oldNodeRV, nodes[0].GetResourceVersionInt64(), "Expecting listed nodes are snapshoted and cannot be affected by update")
 
 	// client watch node update
-	watchCh := make(chan *event.NodeEvent)
+	watchCh := make(chan runtime.Object)
 	stopCh := make(chan struct{})
 	err = distributor.Watch(clientId, latestRVs, watchCh, stopCh)
 	if err != nil {
@@ -447,8 +447,8 @@ func TestRegistrationWorkflow(t *testing.T) {
 	}
 	watchedEventCount := 0
 	for e := range watchCh {
-		assert.Equal(t, event.Modified, e.Type)
-		nodeLoc := types.RvLocation{Region: location.Region(e.Node.GeoInfo.Region), Partition: location.ResourcePartition(e.Node.GeoInfo.ResourcePartition)}
+		assert.Equal(t, runtime.Modified, e.GetEventType())
+		nodeLoc := types.RvLocation{Region: location.Region(e.GetGeoInfo().Region), Partition: location.ResourcePartition(e.GetGeoInfo().ResourcePartition)}
 
 		assert.Equal(t, loc, nodeLoc)
 		watchedEventCount++
@@ -490,7 +490,7 @@ func TestRegistration5MCase(t *testing.T) {
 			// initialize node store with nodes
 			for i := 0; i < tt.regionNum; i++ {
 				region := location.Region(i)
-				eventsAdd := make([]*event.NodeEvent, tt.rpNum*tt.hostPerRP)
+				eventsAdd := make([]*runtime.NodeEvent, tt.rpNum*tt.hostPerRP)
 				for j := 0; j < tt.rpNum; j++ {
 					resourcePartition := location.ResourcePartition(j)
 
@@ -594,7 +594,7 @@ func TestWatchRenewal(t *testing.T) {
 	loc := location.NewLocation(location.Region(nodes[0].GeoInfo.Region), location.ResourcePartition(nodes[0].GeoInfo.ResourcePartition))
 
 	// client watch node update
-	watchCh := make(chan *event.NodeEvent)
+	watchCh := make(chan runtime.Object)
 	stopCh := make(chan struct{})
 	err = distributor.Watch(clientId, latestRVs, watchCh, stopCh)
 	if err != nil {
@@ -604,7 +604,7 @@ func TestWatchRenewal(t *testing.T) {
 
 	wgForWatchEvent := new(sync.WaitGroup)
 	wgForWatchEvent.Add(1)
-	lastRVWatched := new(int)
+	lastRVWatched := new(uint64)
 	watchedEventCount := new(int)
 	*watchedEventCount = 0
 	watch(t, wgForWatchEvent, lastRVWatched, watchedEventCount, len(nodes), watchCh, loc)
@@ -625,7 +625,7 @@ func TestWatchRenewal(t *testing.T) {
 	t.Logf("Watch renewal .....................")
 	close(stopCh)
 	time.Sleep(100 * time.Millisecond) // note here sleep is necessary. otherwise previous watch channel was not successfully discarded
-	watchCh2 := make(chan *event.NodeEvent)
+	watchCh2 := make(chan runtime.Object)
 	stopCh2 := make(chan struct{})
 	err = distributor.Watch(clientId, rvMap2, watchCh2, stopCh2)
 	if err != nil {
@@ -635,7 +635,7 @@ func TestWatchRenewal(t *testing.T) {
 
 	wgForWatchEvent2 := new(sync.WaitGroup)
 	wgForWatchEvent2.Add(1)
-	lastRVWatched2 := new(int)
+	lastRVWatched2 := new(uint64)
 	watchedEventCount2 := new(int)
 	*watchedEventCount2 = 0
 	watch(t, wgForWatchEvent2, lastRVWatched2, watchedEventCount2, len(nodes), watchCh2, loc)
@@ -653,16 +653,16 @@ func TestWatchRenewal(t *testing.T) {
 	t.Logf("Latest rvs after updates: %v\n", rvMap3)
 }
 
-func watch(t *testing.T, wg *sync.WaitGroup, lastRVResult *int, watchedEventCount *int, expectedEventCount int, watchCh chan *event.NodeEvent, loc *location.Location) {
-	go func(wg *sync.WaitGroup, t *testing.T, lastRVResult *int, watchedEventCount *int, expectedEventCount int) {
-		lastRV := int(0)
+func watch(t *testing.T, wg *sync.WaitGroup, lastRVResult *uint64, watchedEventCount *int, expectedEventCount int, watchCh chan runtime.Object, loc *location.Location) {
+	go func(wg *sync.WaitGroup, t *testing.T, lastRVResult *uint64, watchedEventCount *int, expectedEventCount int) {
+		lastRV := uint64(0)
 		for e := range watchCh {
-			assert.Equal(t, event.Modified, e.Type)
-			nodeLoc := location.NewLocation(location.Region(e.Node.GeoInfo.Region), location.ResourcePartition(e.Node.GeoInfo.ResourcePartition))
+			assert.Equal(t, runtime.Modified, e.GetEventType())
+			nodeLoc := location.NewLocation(location.Region(e.GetGeoInfo().Region), location.ResourcePartition(e.GetGeoInfo().ResourcePartition))
 			assert.Equal(t, loc, nodeLoc)
 			*watchedEventCount++
 
-			newRV, _ := strconv.Atoi(e.Node.ResourceVersion)
+			newRV := e.GetResourceVersionInt64()
 			if newRV < lastRV {
 				t.Logf("Got event with rv %d later than rv %d", newRV, lastRV)
 			} else {

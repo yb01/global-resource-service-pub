@@ -14,31 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package types
+package runtime
 
 import (
-	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"testing"
-
+	"global-resource-service/resource-management/pkg/common-lib/types"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"time"
 )
 
-func TestResourceVersionMap_Marshall_UnMarshall(t *testing.T) {
-	rvs := make(TransitResourceVersionMap)
-	loc := RvLocation{Region: location.Beijing, Partition: location.ResourcePartition1}
-	rvs[loc] = 100
+// Generic Object interface to be used in watch mechanism
+// All objects to be watched needs to implement this interface
+//    in order to use the generic watch mechanism
+type Object interface {
+	GetResourceVersionInt64() uint64
+	GetGeoInfo() types.NodeGeoInfo
+	GetEventType() EventType
+	GetId() string
+	GetLocation() *location.Location
+	GetLastUpdatedTime() time.Time
 
-	// marshall
-	b, err := json.Marshal(rvs)
-	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	SetCheckpoint(int)
+	GetCheckpoints() []time.Time
 
-	// unmarshall
-	var newRVMap TransitResourceVersionMap
-	err = json.Unmarshal(b, &newRVMap)
-	assert.Nil(t, err)
-	assert.NotNil(t, newRVMap)
-	assert.Equal(t, 1, len(newRVMap))
-	assert.Equal(t, uint64(100), newRVMap[loc])
+	// Used to remove wrapper
+	GetEvent() Object
 }

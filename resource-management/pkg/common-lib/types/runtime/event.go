@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package event
+package runtime
 
 import (
 	"time"
 
-	"global-resource-service/resource-management/pkg/common-lib/metrics"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	"global-resource-service/resource-management/pkg/common-lib/types"
+	"global-resource-service/resource-management/pkg/common-lib/types/location"
 )
 
 // EventType defines the possible types of events.
@@ -44,21 +45,49 @@ func NewNodeEvent(node *types.LogicalNode, eventType EventType) *NodeEvent {
 	return &NodeEvent{
 		Type:        eventType,
 		Node:        node,
-		checkpoints: make([]time.Time, metrics.Len_ResourceManagementCheckpoint),
+		checkpoints: make([]time.Time, common_lib.Len_ResourceManagementCheckpoint),
 	}
 }
 
-func (e *NodeEvent) SetCheckpoint(checkpoint metrics.ResourceManagementCheckpoint) {
-	if !metrics.ResourceManagementMeasurement_Enabled {
+func (e *NodeEvent) SetCheckpoint(checkpoint int) {
+	if !common_lib.ResourceManagementMeasurement_Enabled {
 		return
 	}
 
 	if e.checkpoints == nil {
-		e.checkpoints = make([]time.Time, metrics.Len_ResourceManagementCheckpoint)
+		e.checkpoints = make([]time.Time, common_lib.Len_ResourceManagementCheckpoint)
 	}
 	e.checkpoints[checkpoint] = time.Now().UTC()
 }
 
 func (e *NodeEvent) GetCheckpoints() []time.Time {
 	return e.checkpoints
+}
+
+func (e NodeEvent) GetResourceVersionInt64() uint64 {
+	return e.Node.GetResourceVersionInt64()
+}
+
+func (e NodeEvent) GetGeoInfo() types.NodeGeoInfo {
+	return e.Node.GeoInfo
+}
+
+func (e NodeEvent) GetId() string {
+	return e.Node.Id
+}
+
+func (e NodeEvent) GetEventType() EventType {
+	return e.Type
+}
+
+func (n *NodeEvent) GetLocation() *location.Location {
+	return location.NewLocation(location.Region(n.Node.GeoInfo.Region), location.ResourcePartition(n.Node.GeoInfo.ResourcePartition))
+}
+
+func (n *NodeEvent) GetLastUpdatedTime() time.Time {
+	return n.Node.LastUpdatedTime
+}
+
+func (n *NodeEvent) GetEvent() Object {
+	return n
 }

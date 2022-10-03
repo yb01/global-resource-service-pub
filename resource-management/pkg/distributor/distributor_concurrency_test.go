@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
 func TestSingleRPMutipleClients_Workflow(t *testing.T) {
@@ -137,7 +137,7 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			allWaitGroup := new(sync.WaitGroup)
 			start = time.Now()
 			for i := 0; i < tt.clientNum; i++ {
-				watchCh := make(chan *event.NodeEvent)
+				watchCh := make(chan runtime.Object)
 				err := distributor.Watch(clientIds[i], latestRVsByClient[i], watchCh, stopCh)
 				if err != nil {
 					assert.Fail(t, "Encountered error while building watch connection.", "Encountered error while building watch connection. Error %v", err)
@@ -145,11 +145,11 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 				}
 				allWaitGroup.Add(1)
 
-				go func(expectedEventCount int, watchCh chan *event.NodeEvent, wg *sync.WaitGroup) {
+				go func(expectedEventCount int, watchCh chan runtime.Object, wg *sync.WaitGroup) {
 					eventCount := 0
 
 					for e := range watchCh {
-						assert.Equal(t, event.Modified, e.Type)
+						assert.Equal(t, runtime.Modified, e.GetEventType())
 						eventCount++
 
 						if eventCount >= expectedEventCount {
@@ -164,13 +164,13 @@ func TestSingleRPMutipleClients_Workflow(t *testing.T) {
 			for i := 0; i < tt.clientNum; i++ {
 				go func(expectedEventCount int, nodes []*types.LogicalNode, clientId string) {
 					for j := 0; j < expectedEventCount/len(nodes)+2; j++ {
-						updateNodeEvents := make([]*event.NodeEvent, len(nodes))
+						updateNodeEvents := make([]*runtime.NodeEvent, len(nodes))
 						for k := 0; k < len(nodes); k++ {
 							rvToGenerate += 1
 
 							newNode := nodes[k].Copy()
 							newNode.ResourceVersion = strconv.Itoa(rvToGenerate)
-							updateNodeEvents[k] = event.NewNodeEvent(newNode, event.Modified)
+							updateNodeEvents[k] = runtime.NewNodeEvent(newNode, runtime.Modified)
 						}
 						result, rvMap := distributor.ProcessEvents(updateNodeEvents)
 						assert.True(t, result)
@@ -234,10 +234,10 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			defer tearDown()
 
 			// create nodes
-			eventsAdd := make([][][]*event.NodeEvent, tt.regionNum)
+			eventsAdd := make([][][]*runtime.NodeEvent, tt.regionNum)
 			for i := 0; i < tt.regionNum; i++ {
 				regionName := location.Regions[i]
-				eventsAdd[i] = make([][]*event.NodeEvent, tt.rpNum)
+				eventsAdd[i] = make([][]*runtime.NodeEvent, tt.rpNum)
 				for j := 0; j < tt.rpNum; j++ {
 					rpName := location.ResourcePartitions[j]
 					loc := location.NewLocation(regionName, rpName)
@@ -252,7 +252,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			start := time.Now()
 			for i := 0; i < tt.regionNum; i++ {
 				for j := 0; j < tt.rpNum; j++ {
-					go func(done *sync.WaitGroup, events []*event.NodeEvent) {
+					go func(done *sync.WaitGroup, events []*runtime.NodeEvent) {
 						result, rvMap := distributor.ProcessEvents(events)
 						done.Done()
 						assert.True(t, result)
@@ -324,7 +324,7 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 			allWaitGroup := new(sync.WaitGroup)
 			start = time.Now()
 			for i := 0; i < tt.clientNum; i++ {
-				watchCh := make(chan *event.NodeEvent)
+				watchCh := make(chan runtime.Object)
 				stopCh := make(chan struct{})
 				err := distributor.Watch(clientIds[i], latestRVsByClient[i], watchCh, stopCh)
 				if err != nil {
@@ -333,11 +333,11 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 				}
 				allWaitGroup.Add(1)
 
-				go func(expectedEventCount int, watchCh chan *event.NodeEvent, wg *sync.WaitGroup) {
+				go func(expectedEventCount int, watchCh chan runtime.Object, wg *sync.WaitGroup) {
 					eventCount := 0
 
 					for e := range watchCh {
-						assert.Equal(t, event.Modified, e.Type)
+						assert.Equal(t, runtime.Modified, e.GetEventType())
 						eventCount++
 
 						if eventCount >= expectedEventCount {
@@ -357,12 +357,12 @@ func TestMultipleRPsMutipleClients_Workflow(t *testing.T) {
 					eventCount := 0
 
 					for j := 0; j < expectedEventCount/len(nodes)+2; j++ {
-						updateNodeEvents := make([]*event.NodeEvent, len(nodes))
+						updateNodeEvents := make([]*runtime.NodeEvent, len(nodes))
 						for k := 0; k < len(nodes); k++ {
 							rvToGenerate += 1
 							newNode := nodes[k].Copy()
 							newNode.ResourceVersion = strconv.Itoa(rvToGenerate)
-							updateNodeEvents[k] = event.NewNodeEvent(newNode, event.Modified)
+							updateNodeEvents[k] = runtime.NewNodeEvent(newNode, runtime.Modified)
 
 							eventCount++
 							if eventCount >= expectedEventCount {
@@ -487,7 +487,7 @@ func TestProcessEvents_TwoRPs_AddNodes_Sequential(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
-	//metrics.ResourceManagementMeasurement_Enabled = false
+	//common_lib.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	// generate add node events
 	for i := 0; i < len(nodeCounts); i++ {
@@ -602,7 +602,7 @@ func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 	distributor := setUp()
 	defer tearDown()
 
-	//metrics.ResourceManagementMeasurement_Enabled = false
+	//common_lib.ResourceManagementMeasurement_Enabled = false
 	nodeCounts := []int{10, 100, 1000, 10000, 100000, 1000000}
 	// generate add node events
 	for i := 0; i < len(nodeCounts); i++ {
@@ -613,12 +613,12 @@ func TestProcessEvents_TwoRPs_Concurrent(t *testing.T) {
 		wg := new(sync.WaitGroup)
 		wg.Add(2)
 
-		go func(done *sync.WaitGroup, eventsToProcess []*event.NodeEvent) {
+		go func(done *sync.WaitGroup, eventsToProcess []*runtime.NodeEvent) {
 			distributor.ProcessEvents(eventsToProcess)
 			done.Done()
 		}(wg, eventsAdd1)
 
-		go func(done *sync.WaitGroup, eventsToProcess []*event.NodeEvent) {
+		go func(done *sync.WaitGroup, eventsToProcess []*runtime.NodeEvent) {
 			distributor.ProcessEvents(eventsToProcess)
 			done.Done()
 		}(wg, eventsAdd2)

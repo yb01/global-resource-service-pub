@@ -31,8 +31,8 @@ import (
 	store "global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/metrics"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	apiTypes "global-resource-service/resource-management/pkg/service-api/types"
 )
 
@@ -232,7 +232,7 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 	klog.V(3).Infof("Serving watch for client: %s", clientId)
 
 	// For 630 distributor impl, watchChannel and stopChannel passed into the Watch routine from API layer
-	watchCh := make(chan *event.NodeEvent, WatchChannelSize)
+	watchCh := make(chan runtime.Object, WatchChannelSize)
 	stopCh := make(chan struct{})
 
 	// Signal the distributor to stop the watch for this client on exit
@@ -283,19 +283,20 @@ func (i *Installer) serverWatch(resp http.ResponseWriter, req *http.Request, cli
 				return
 			}
 
-			klog.V(6).Infof("Getting event from distributor, node Id: %v", record.Node.Id)
+			klog.V(6).Infof("Getting event from distributor, node Id: %v", record.GetId())
 
-			if err := json.NewEncoder(resp).Encode(*record); err != nil {
+			if err := json.NewEncoder(resp).Encode(record); err != nil {
 				klog.V(3).Infof("encoding record failed. error %v", err)
 				resp.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			record.SetCheckpoint(metrics.Serializer_Encoded)
+
+			record.SetCheckpoint(int(metrics.Serializer_Encoded))
 			if len(watchCh) == 0 {
 				flusher.Flush()
 			}
-			record.SetCheckpoint(metrics.Serializer_Sent)
-			event.AddLatencyMetricsAllCheckpoints(record)
+			record.SetCheckpoint(int(metrics.Serializer_Sent))
+			metrics.AddLatencyMetricsAllCheckpoints(record)
 		}
 	}
 }

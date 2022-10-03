@@ -27,8 +27,8 @@ import (
 	"k8s.io/klog/v2"
 
 	"global-resource-service/resource-management/pkg/aggregrator"
+	common_lib "global-resource-service/resource-management/pkg/common-lib"
 	localMetrics "global-resource-service/resource-management/pkg/common-lib/metrics"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/distributor"
 	"global-resource-service/resource-management/pkg/service-api/endpoints"
 	"global-resource-service/resource-management/pkg/store/redis"
@@ -38,7 +38,7 @@ type Config struct {
 	ResourceUrls              []string
 	MasterIp                  string
 	MasterPort                string
-	RedisPort		  string
+	RedisPort                 string
 	EventMetricsDumpFrequency time.Duration
 }
 
@@ -108,7 +108,7 @@ func Run(c *Config) error {
 		return err
 	}
 
-	if localMetrics.ResourceManagementMeasurement_Enabled {
+	if common_lib.ResourceManagementMeasurement_Enabled {
 		// start the event metrics report
 		klog.V(3).Infof("Starting the event metrics reporting routine...")
 		wg.Add(1)
@@ -116,7 +116,7 @@ func Run(c *Config) error {
 			defer wg.Done()
 			for {
 				time.Sleep(c.EventMetricsDumpFrequency)
-				event.PrintLatencyReport()
+				localMetrics.PrintLatencyReport()
 			}
 		}()
 	}

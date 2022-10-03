@@ -24,8 +24,8 @@ import (
 	"global-resource-service/resource-management/pkg/common-lib/hash"
 	"global-resource-service/resource-management/pkg/common-lib/interfaces/store"
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 	"global-resource-service/resource-management/pkg/distributor/cache"
 	"global-resource-service/resource-management/pkg/distributor/node"
 )
@@ -93,7 +93,7 @@ func (vs *VirtualNodeStore) SnapShot() ([]*types.LogicalNode, types.TransitResou
 	rvs := make(types.TransitResourceVersionMap)
 	for _, node := range vs.nodeEventByHash {
 		nodesCopy[index] = node.CopyNode()
-		newRV := node.GetResourceVersion()
+		newRV := node.GetResourceVersionInt64()
 		rvLoc := *node.GetRvLocation()
 		if lastRV, isOK := rvs[rvLoc]; isOK {
 			if lastRV < newRV {
@@ -114,7 +114,7 @@ func (vs *VirtualNodeStore) GenerateBookmarkEvent() *node.ManagedNodeEvent {
 
 	for _, n := range vs.nodeEventByHash {
 		logicalNode := n.CopyNode()
-		nodeEvent := event.NewNodeEvent(logicalNode, event.Bookmark)
+		nodeEvent := runtime.NewNodeEvent(logicalNode, runtime.Bookmark)
 		return node.NewManagedNodeEvent(nodeEvent, n.GetLocation())
 	}
 	return nil
@@ -259,12 +259,12 @@ func (ns *NodeStore) UpdateNode(nodeEvent *node.ManagedNodeEvent) {
 }
 
 // TODO
-func (ns NodeStore) DeleteNode(nodeEvent event.NodeEvent) {
+func (ns NodeStore) DeleteNode(nodeEvent runtime.NodeEvent) {
 }
 
 func (ns NodeStore) GetNode(region location.Region, resourcePartition location.ResourcePartition, nodeId string) (*types.LogicalNode, error) {
 	n := &types.LogicalNode{Id: nodeId}
-	ne := event.NewNodeEvent(n, event.Bookmark)
+	ne := runtime.NewNodeEvent(n, runtime.Bookmark)
 
 	loc := location.NewLocation(location.Region(region), location.ResourcePartition((resourcePartition)))
 	mgmtNE := node.NewManagedNodeEvent(ne, loc)
@@ -313,19 +313,19 @@ func (ns *NodeStore) ProcessNodeEvents(nodeEvents []*node.ManagedNodeEvent, pers
 
 func (ns *NodeStore) processNodeEvent(nodeEvent *node.ManagedNodeEvent) bool {
 	switch nodeEvent.GetEventType() {
-	case event.Added:
+	case runtime.Added:
 		ns.CreateNode(nodeEvent)
-	case event.Modified:
+	case runtime.Modified:
 		ns.UpdateNode(nodeEvent)
 	default:
 		// TODO - action needs to take when non acceptable events happened
 		klog.Warningf("Invalid event type [%v] for node %v, location %v, rv %v",
-			nodeEvent.GetNodeEvent(), nodeEvent.GetId(), nodeEvent.GetRvLocation(), nodeEvent.GetResourceVersion())
+			nodeEvent.GetNodeEvent(), nodeEvent.GetId(), nodeEvent.GetRvLocation(), nodeEvent.GetResourceVersionInt64())
 		return false
 	}
 
 	// Update ResourceVersionMap
-	newRV := nodeEvent.GetResourceVersion()
+	newRV := nodeEvent.GetResourceVersionInt64()
 	ns.rvLock.Lock()
 	region := nodeEvent.GetLocation().GetRegion()
 	resourcePartition := nodeEvent.GetLocation().GetResourcePartition()
@@ -406,10 +406,11 @@ func (ns *NodeStore) updateNodeInRing(nodeEvent *node.ManagedNodeEvent) {
 	if oldNode, isOK := vNodeStore.nodeEventByHash[hashValue]; isOK {
 		// TODO - check uuid to make sure updating right node
 		if oldNode.GetId() == nodeEvent.GetId() {
-			if oldNode.GetResourceVersion() < nodeEvent.GetResourceVersion() {
+			if oldNode.GetResourceVersionInt64() < nodeEvent.GetResourceVersionInt64() {
 				vNodeStore.nodeEventByHash[hashValue] = nodeEvent
 			} else {
-				klog.V(3).Infof("Discard node update events due to resource version is older: %d. Existing rv %d", nodeEvent.GetResourceVersion(), oldNode.GetResourceVersion())
+				klog.V(3).Infof("Discard node update events due to resource version is older: %d. Existing rv %d",
+					nodeEvent.GetResourceVersionInt64(), oldNode.GetResourceVersionInt64())
 				vNodeStore.mu.Unlock()
 				return
 			}

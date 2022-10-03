@@ -18,20 +18,20 @@ package node
 
 import (
 	"k8s.io/klog/v2"
-	"strconv"
+	"time"
 
 	"global-resource-service/resource-management/pkg/common-lib/types"
-	"global-resource-service/resource-management/pkg/common-lib/types/event"
 	"global-resource-service/resource-management/pkg/common-lib/types/location"
+	"global-resource-service/resource-management/pkg/common-lib/types/runtime"
 )
 
 // TODO - add more fields for minimal node record
 type ManagedNodeEvent struct {
-	nodeEvent *event.NodeEvent
+	nodeEvent *runtime.NodeEvent
 	loc       *location.Location
 }
 
-func NewManagedNodeEvent(nodeEvent *event.NodeEvent, loc *location.Location) *ManagedNodeEvent {
+func NewManagedNodeEvent(nodeEvent *runtime.NodeEvent, loc *location.Location) *ManagedNodeEvent {
 	return &ManagedNodeEvent{
 		nodeEvent: nodeEvent,
 		loc:       loc,
@@ -51,23 +51,39 @@ func (n *ManagedNodeEvent) GetRvLocation() *types.RvLocation {
 	return &types.RvLocation{Region: n.loc.GetRegion(), Partition: n.loc.GetResourcePartition()}
 }
 
-func (n *ManagedNodeEvent) GetResourceVersion() uint64 {
-	rv, err := strconv.ParseUint(n.nodeEvent.Node.ResourceVersion, 10, 64)
-	if err != nil {
-		klog.Errorf("Unable to convert resource version %s to uint64\n", n.nodeEvent.Node.ResourceVersion)
-		return 0
-	}
-	return rv
+func (n *ManagedNodeEvent) GetResourceVersionInt64() uint64 {
+	return n.nodeEvent.Node.GetResourceVersionInt64()
 }
 
-func (n *ManagedNodeEvent) GetEventType() event.EventType {
+func (n *ManagedNodeEvent) GetGeoInfo() types.NodeGeoInfo {
+	return n.nodeEvent.Node.GeoInfo
+}
+
+func (n *ManagedNodeEvent) GetEventType() runtime.EventType {
 	return n.nodeEvent.Type
 }
 
-func (n *ManagedNodeEvent) GetNodeEvent() *event.NodeEvent {
+func (n *ManagedNodeEvent) GetNodeEvent() *runtime.NodeEvent {
 	return n.nodeEvent
 }
 
 func (n *ManagedNodeEvent) CopyNode() *types.LogicalNode {
 	return n.nodeEvent.Node.Copy()
+}
+
+func (n *ManagedNodeEvent) SetCheckpoint(int) {
+	klog.Error("Not implemented SetCheckpoint method")
+}
+
+func (e *ManagedNodeEvent) GetCheckpoints() []time.Time {
+	klog.Error("Not implemented GetCheckpoints method")
+	return nil
+}
+
+func (n *ManagedNodeEvent) GetLastUpdatedTime() time.Time {
+	return n.nodeEvent.Node.LastUpdatedTime
+}
+
+func (n *ManagedNodeEvent) GetEvent() runtime.Object {
+	return n.nodeEvent
 }
