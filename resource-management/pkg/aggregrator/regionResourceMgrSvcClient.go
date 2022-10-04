@@ -49,20 +49,20 @@ type ListOptions struct {
 	Limit int
 }
 
-type SimInterface interface {
+type RrmsInterface interface {
 	List(ListOptions) ([][]*runtime.NodeEvent, types.TransitResourceVersionMap, uint64, error)
 	Watch(types.TransitResourceVersionMap) (watch.Interface, error)
 }
 
-// simClient implements SimInterface
-type simClient struct {
+// RrmsClient implements Region Resource Mgr Service's L/W Interface
+type RrmsClient struct {
 	config Config
 	// REST client to region manager/simulator service
 	restClient rest.Interface
 }
 
-// NewSimClient returns a reference to the simClient object
-func NewSimClient(cfg Config) *simClient {
+// NewRrmsClient returns a reference to the RrmsClient object
+func NewRrmsClient(cfg Config) *RrmsClient {
 	httpclient := http.Client{Timeout: cfg.RequestTimeout}
 	url, err := rest.DefaultServerURL(cfg.ServiceUrl, "", false)
 
@@ -77,14 +77,14 @@ func NewSimClient(cfg Config) *simClient {
 		return nil
 	}
 
-	return &simClient{
+	return &RrmsClient{
 		config:     cfg,
 		restClient: c,
 	}
 }
 
 // List takes label and field selectors, and returns the list of Nodes that match those selectors.
-func (c *simClient) List(opts ListOptions) ([][]*runtime.NodeEvent, types.TransitResourceVersionMap, uint64, error) {
+func (c *RrmsClient) List(opts ListOptions) ([][]*runtime.NodeEvent, types.TransitResourceVersionMap, uint64, error) {
 	req := c.restClient.Get()
 	req = req.Resource(ResourceName)
 	req = req.Timeout(c.config.RequestTimeout)
@@ -105,8 +105,8 @@ func (c *simClient) List(opts ListOptions) ([][]*runtime.NodeEvent, types.Transi
 
 }
 
-// Watch returns a watch.Interface that watches the requested simClient.
-func (c *simClient) Watch(versionMap types.TransitResourceVersionMap) (watch.Interface, error) {
+// Watch returns a watch.Interface that watches the requested RrmsClient.
+func (c *RrmsClient) Watch(versionMap types.TransitResourceVersionMap) (watch.Interface, error) {
 	req := c.restClient.Post()
 	req = req.Resource(ResourceName)
 	req = req.Timeout(c.config.RequestTimeout)

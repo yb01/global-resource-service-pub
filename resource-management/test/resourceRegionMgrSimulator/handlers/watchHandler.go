@@ -98,7 +98,6 @@ func (w *WatchHandler) serverWatch(resp http.ResponseWriter, req *http.Request, 
 	klog.V(3).Infof("Serving watch for client: %s", clientId)
 
 	channelSize := 25000
-	// TODO: per perf test results, adjust the channel buffer size
 	watchCh := make(chan runtime.Object, channelSize /*ep.WatchChannelSize*/)
 	stopCh := make(chan struct{})
 

@@ -30,20 +30,18 @@ import (
 )
 
 type RegionConfig struct {
-	RegionName            string
-	RpNum                 int
-	NodesPerRP            int
-	RPDownNumber          int
-	MasterPort            string
-	DataPattern           string
+	RegionName                   string
+	RpNum                        int
+	NodesPerRP                   int
+	RPDownNumber                 int
+	MasterPort                   string
+	DataPattern                  string
 	WaitTimeForDataChangePattern int
 }
 
 func Run(c *RegionConfig) error {
 
 	// Create the handlers
-	rh := handlers.NewRegionNodeEventsHander()
-
 	wh := handlers.NewWatchHandler()
 
 	// create a new serve mux and register the handlers
@@ -53,22 +51,12 @@ func Run(c *RegionConfig) error {
 	//
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 
-	// For initial pull all mini node added events in all RPs of one specified region
-	getRouter.HandleFunc(handlers.InitPullPath, rh.SimulatorHandler)
-
-	// For subsequent pull all mini node modified events in all RPs of one specified region
-	getRouter.HandleFunc(handlers.SubsequentPullPath, rh.SimulatorHandler)
-
 	// List resources
 	getRouter.HandleFunc(handlers.RegionlessResourcePath, wh.ResourceHandler)
 
 	// handlers for POST API
 	//
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-
-	// with CRV, discard all mini node modified events
-	// which resource version is older than CRV in all RPs of specified region
-	postRouter.HandleFunc(handlers.PostCRVPath, rh.SimulatorHandler)
 
 	// watch for node changes
 	postRouter.HandleFunc(handlers.RegionlessResourcePath, wh.ResourceHandler)

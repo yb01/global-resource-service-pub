@@ -29,14 +29,12 @@ import (
 )
 
 // LwRun implements Run interface of Aggregator
-//TODO: refactor to add Run() interface for different implementations
-//
 func (a *Aggregator) LwRun() (err error) {
-	numberOfURLs := len(a.urls)
+	numberOfRegions := len(a.urls)
 
 	klog.V(3).Infof("Running for loop to connect to to resource region manager...")
 
-	for i := 0; i < numberOfURLs; i++ {
+	for i := 0; i < numberOfRegions; i++ {
 		go func(i int) {
 			klog.V(3).Infof("Starting goroutine for region: %v", a.urls[i])
 			defer func() {
@@ -49,10 +47,12 @@ func (a *Aggregator) LwRun() (err error) {
 			var eventProcess bool
 
 			// create client to resource region manager
-			c := NewSimClient(Config{ServiceUrl: a.urls[i], RequestTimeout: 30 * time.Minute})
+			c := NewRrmsClient(Config{ServiceUrl: a.urls[i], RequestTimeout: 30 * time.Minute})
 
 			klog.V(3).Infof("Starting loop list-watching nodes from region: %v", a.urls[i])
 
+			// TODO: add limit in config
+			// TODO: add pagination feature in region resource mgr service
 			// hack, list all 1m node in one call without pagination
 			regionNodeEvents, crv, length = a.listNodes(c, ListOptions{Limit: 1000000})
 
@@ -63,6 +63,8 @@ func (a *Aggregator) LwRun() (err error) {
 			}
 
 			// Convert 2D array to 1D array
+			// TODO: add dynamically watch at RP granularity level feature in GRS
+			//       by spawning threads for watch each RP, we can further optimize concurrency and also avoid below conversions
 			minRecordNodeEvents := make([]*event.NodeEvent, 0, length)
 			for j := 0; j < len(regionNodeEvents); j++ {
 				minRecordNodeEvents = append(minRecordNodeEvents, regionNodeEvents[j]...)
@@ -83,7 +85,7 @@ func (a *Aggregator) LwRun() (err error) {
 	return nil
 }
 
-func (a *Aggregator) listNodes(client SimInterface, listOpts ListOptions) (nodeList [][]*event.NodeEvent, crv types.TransitResourceVersionMap, length uint64) {
+func (a *Aggregator) listNodes(client RrmsInterface, listOpts ListOptions) (nodeList [][]*event.NodeEvent, crv types.TransitResourceVersionMap, length uint64) {
 	var start, end time.Time
 	var err error
 
@@ -115,7 +117,7 @@ func (a *Aggregator) listNodes(client SimInterface, listOpts ListOptions) (nodeL
 	return nodeList, crv, length
 }
 
-func (a *Aggregator) watchNodes(client SimInterface, crv types.TransitResourceVersionMap) {
+func (a *Aggregator) watchNodes(client RrmsInterface, crv types.TransitResourceVersionMap) {
 	var start, end time.Time
 
 	klog.Infof("Watch resources update from region manager ...")
@@ -145,6 +147,7 @@ func (a *Aggregator) watchNodes(client SimInterface, crv types.TransitResourceVe
 				klog.V(9).Infof("Got node event from region manager, nodeId: %v", record.Node.Id)
 
 				// TODO: refine this go routine to sub functions
+				// TODO: persists the CRV returned from processEvents() for re-watch
 				go func() {
 					a.processNode(&record)
 				}()
